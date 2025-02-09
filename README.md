@@ -61,7 +61,9 @@ fn main() {
 ```
 
 Then you can run `cargo run` anywhere in the `my_project` directory, and the standard output will print out the derivative of the function
+
 ![log(x^3sin(y))/cos(x^y)](example_function1.png "Function")
+
 with respect to `x`
 
 This example demonstrates all the features of the library as of now and hopefully makes the usage clear
