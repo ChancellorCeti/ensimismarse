@@ -40,7 +40,7 @@ where
             _ => false,
         }
     }
-    fn check_if_operation(&self) -> bool {
+    /*fn check_if_operation(&self) -> bool {
         if let Expr::Operation(_x) = self {
             return true;
         }
@@ -62,7 +62,7 @@ where
                 panic!("not an operation lol")
             }
         }
-    }
+    }*/
     pub fn simplify(&mut self) {
         match self {
             Expr::Variable(_x) => {

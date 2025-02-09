@@ -1,4 +1,5 @@
-use crate::structs::{Expr,Operation,TrigOp};
+use crate::structs::{Expr, Operation, TrigOp};
+use std::collections::HashMap;
 pub fn differentiate<T>(f: Expr<T>, v: char) -> Expr<T>
 where
     T: From<f64> + std::clone::Clone,
@@ -121,4 +122,40 @@ where
         },
     }
     res
+}
+pub fn numerical_differentiate<T>(
+    f: Expr<T>,
+    v: char,
+    acc: f64,
+    variable_values: &HashMap<char, T>,
+) -> T
+where
+    T: From<f64>
+        + std::clone::Clone
+        + std::ops::Add<Output = T>
+        + std::ops::Mul<Output = T>
+        + std::ops::Div<Output = T>
+        + std::ops::Sub<Output = T>
+        + std::cmp::PartialEq
+        + std::fmt::Debug
+        + From<f64>
+        + Into<f64>,
+    f64: From<T>,
+{
+    let f1 = f.evaluate_expr(variable_values);
+    let o = variable_values.get(&v);
+    match o {
+        Some(o_val) => {
+            let o_val_c = o_val.clone();
+            let mut variable_values_delta = variable_values.clone();
+            variable_values_delta.insert(v, o_val_c + T::from(acc));
+            let f2 = f.evaluate_expr(&variable_values_delta);
+            let dy = f2 - f1;
+            let dx = acc;
+            return dy / dx.into();
+        }
+        None => {
+            panic!("variable {} not defined with a numerical value when tryna numerically differentiate",v)
+        }
+    }
 }
