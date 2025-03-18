@@ -15,6 +15,97 @@ impl<
 where
     f64: From<T>,
 {
+    pub fn expr_to_string(&self) -> String {
+        match self {
+            Expr::Constant(x) => {
+                return f64::from(x.clone()).to_string();
+            }
+            Expr::Variable(x) => {
+                return x.to_string();
+            }
+            Expr::Operation(some_op) => match *some_op.to_owned() {
+                Operation::Add(x) => {
+                    let mut res: String = String::new();
+                    for i in 0..x.len() - 1 {
+                        if x[i].check_if_constant() || x[i].check_if_variable() {
+                            res.push_str(x[i].expr_to_string().as_str());
+                        } else {
+                            res.push('(');
+                            res.push_str(x[i].expr_to_string().as_str());
+                            res.push(')');
+                        }
+                        res.push('+');
+                    }
+                    res.push_str(x[x.len() - 1].expr_to_string().as_str());
+                    return res;
+                }
+                Operation::Mul(x) => {
+                    let mut res: String = String::new();
+                    for i in 0..x.len() - 1 {
+                        if x[i].check_if_constant() || x[i].check_if_variable() {
+                            res.push_str(x[i].expr_to_string().as_str());
+                        } else {
+                            res.push('(');
+                            res.push_str(x[i].expr_to_string().as_str());
+                            res.push(')');
+                        }
+
+                        res.push('*');
+                    }
+                    res.push_str(x[x.len() - 1].expr_to_string().as_str());
+                    return res;
+                }
+                Operation::Div((a, b)) => {
+                    let mut res: String = String::new();
+                    if a.check_if_constant() || a.check_if_variable() {
+                        res.push_str(a.expr_to_string().as_str());
+                    } else {
+                        res.push('(');
+                        res.push_str(a.expr_to_string().as_str());
+                        res.push(')');
+                    }
+                    res.push('/');
+                    if b.check_if_constant() || b.check_if_variable() {
+                        res.push_str(b.expr_to_string().as_str());
+                    } else {
+                        res.push('(');
+                        res.push_str(b.expr_to_string().as_str());
+                        res.push(')');
+                    }
+                    return res;
+                }
+                Operation::Pow((a, b)) => {
+                    let mut res: String = String::new();
+                    if a.check_if_constant() || a.check_if_variable() {
+                        res.push_str(a.expr_to_string().as_str());
+                    } else {
+                        res.push('(');
+                        res.push_str(a.expr_to_string().as_str());
+                        res.push(')');
+                    }
+                    res.push('^');
+                    if b.check_if_constant() || b.check_if_variable() {
+                        res.push_str(b.expr_to_string().as_str());
+                    } else {
+                        res.push('(');
+                        res.push_str(b.expr_to_string().as_str());
+                        res.push(')');
+                    }
+                    return res;
+                }
+                Operation::Trig(TrigOp::Sin(x)) => {
+                    let mut res: String = String::new();
+                    res.push_str("sin(");
+                    res.push_str(x.expr_to_string().as_str());
+                    res.push(')');
+                    return res;
+                }
+                _ => {
+                    todo!()
+                }
+            },
+        }
+    }
     fn check_if_zero(&self) -> bool {
         match self {
             Expr::Constant(x) => {
@@ -45,14 +136,14 @@ where
             return true;
         }
         return false;
-    }
+    }*/
     fn check_if_variable(&self) -> bool {
         if let Expr::Variable(_x) = self {
             return true;
         }
         return false;
     }
-    fn extract_operation(&self) -> Operation<T> {
+    /*fn extract_operation(&self) -> Operation<T> {
         match self {
             Expr::Operation(x) => {
                 let x_unboxed = *x.to_owned();
@@ -75,9 +166,11 @@ where
                 Operation::Add(mut x) => {
                     let mut constants_sum: T = (0.0).into();
                     let mut constants_exist = false;
+                    let mut constants_count: usize = 0;
                     for i in 0..x.len() {
                         x[i].simplify();
                         if let Expr::Constant(ref c) = x[i] {
+                            constants_count += 1;
                             constants_exist = true;
                             constants_sum = constants_sum + c.clone();
                         }
@@ -100,6 +193,10 @@ where
                                 }
                             }
                         }*/
+                    }
+                    if constants_count == x.len() {
+                        *self = Expr::Constant(constants_sum);
+                        return;
                     }
                     if constants_exist {
                         x.retain(|addend| addend.check_if_constant() == false);
@@ -124,6 +221,7 @@ where
                 Operation::Mul(mut x) => {
                     let mut res_factors: Vec<Expr<T>> = Vec::new();
                     let mut constants_exist = false;
+                    let mut constants_count: usize = 0;
                     let mut constants_sum: T = (1.0).into();
                     //check if any factor is equal to 0, set the whole thing to 0 if so
                     for i in 0..x.len() {
@@ -133,10 +231,15 @@ where
                             return;
                         }
                         if let Expr::Constant(ref c) = x[i] {
+                            constants_count += 1;
                             constants_exist = true;
                             constants_sum = constants_sum * c.clone();
                         }
                         res_factors.push(x[i].clone());
+                    }
+                    if constants_count == x.len() {
+                        *self = Expr::Constant(constants_sum);
+                        return;
                     }
                     if constants_exist {
                         res_factors.retain(|addend| addend.check_if_constant() == false);

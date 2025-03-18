@@ -31,6 +31,7 @@ where
             Operation::Pow(x) => {
                 res = Expr::Operation(Box::new(Operation::Mul(vec![
                     x.1.clone(),
+                    differentiate(x.0.clone(),v),
                     Expr::Operation(Box::new(Operation::Pow((
                         x.0,
                         Expr::Operation(Box::new(Operation::Add(vec![

@@ -64,7 +64,7 @@ Then you can run `cargo run` anywhere in the `my_project` directory, and the sta
 
 ![log(x^3sin(y))/cos(x^y)](example_function1.png "Function")
 
-with respect to `x`
+with respect to `x`. The variable `funky_derivative` will have the expression for the derivative of that function.
 
 This example demonstrates all the features of the library as of now and hopefully makes the usage clear
 
