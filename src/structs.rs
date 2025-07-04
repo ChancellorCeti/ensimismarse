@@ -1,3 +1,4 @@
+use crate::complex::*;
 #[derive(Debug, Clone)]
 pub enum Operation<T: std::clone::Clone> {
     Add(Vec<Expr<T>>),
@@ -34,5 +35,12 @@ pub enum HyperbolicOp<T: Clone> {
 pub enum Expr<T: Clone> {
     Variable(char),
     Constant(T),
+    ComplexNum(Box<ComplexNumber<T>>),
     Operation(Box<Operation<T>>),
+}
+
+#[derive(Debug, Clone)]
+pub enum ComplexNumber<T: Clone> {
+    Cartesian(ComplexNumCartesianForm<T>),
+    Polar(ComplexNumPolarForm<T>),
 }

@@ -17,6 +17,9 @@ where
 {
     pub fn expr_to_string(&self) -> String {
         match self {
+            Expr::ComplexNum(_z) => {
+                todo!()
+            }
             Expr::Constant(x) => {
                 return f64::from(x.clone()).to_string();
             }
@@ -36,7 +39,13 @@ where
                         }
                         res.push('+');
                     }
-                    res.push_str(x[x.len() - 1].expr_to_string().as_str());
+                    if x[x.len() - 1].check_if_constant() || x[x.len() - 1].check_if_variable() {
+                        res.push_str(x[x.len() - 1].expr_to_string().as_str());
+                    } else {
+                        res.push('(');
+                        res.push_str(x[x.len() - 1].expr_to_string().as_str());
+                        res.push(')');
+                    }
                     return res;
                 }
                 Operation::Mul(x) => {
@@ -52,7 +61,13 @@ where
 
                         res.push('*');
                     }
-                    res.push_str(x[x.len() - 1].expr_to_string().as_str());
+                    if x[x.len() - 1].check_if_constant() || x[x.len() - 1].check_if_variable() {
+                        res.push_str(x[x.len() - 1].expr_to_string().as_str());
+                    } else {
+                        res.push('(');
+                        res.push_str(x[x.len() - 1].expr_to_string().as_str());
+                        res.push(')');
+                    }
                     return res;
                 }
                 Operation::Div((a, b)) => {
@@ -96,6 +111,13 @@ where
                 Operation::Trig(TrigOp::Sin(x)) => {
                     let mut res: String = String::new();
                     res.push_str("sin(");
+                    res.push_str(x.expr_to_string().as_str());
+                    res.push(')');
+                    return res;
+                }
+                Operation::Exp(x) => {
+                    let mut res: String = String::new();
+                    res.push_str("exp(");
                     res.push_str(x.expr_to_string().as_str());
                     res.push(')');
                     return res;
@@ -156,6 +178,9 @@ where
     }*/
     pub fn simplify(&mut self) {
         match self {
+            Expr::ComplexNum(_z) => {
+                return;
+            }
             Expr::Variable(_x) => {
                 return;
             }
@@ -268,6 +293,9 @@ where
     }
     pub fn evaluate_expr(&self, variable_values: &HashMap<char, T>) -> T {
         match self {
+            Expr::ComplexNum(_z) => {
+                todo!()
+            }
             Expr::Variable(x) => {
                 let var_desired = variable_values.get(x);
                 match var_desired {
@@ -361,7 +389,7 @@ where
         }
     }
 }
-impl<T: std::clone::Clone + std::cmp::PartialEq> PartialEq for Expr<T> {
+impl<T: std::clone::Clone + std::cmp::PartialEq + std::cmp::PartialEq> PartialEq for Expr<T> {
     fn eq(&self, other: &Self) -> bool {
         use std::mem::discriminant;
         match (self, other) {

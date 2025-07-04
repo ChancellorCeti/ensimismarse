@@ -8,6 +8,9 @@ where
     res = Expr::Constant(T::from(0.0));
     let fc = f.clone();
     match f {
+        Expr::ComplexNum(_z)=>{
+            todo!()
+        }
         Expr::Constant(_x) => {
             res = Expr::Constant(T::from(0.0));
         }
