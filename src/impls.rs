@@ -248,12 +248,28 @@ where
                     let mut constants_exist = false;
                     let mut constants_count: usize = 0;
                     let mut constants_sum: T = (1.0).into();
+                    let mut vars_count: HashMap<char,usize> = HashMap::new();
+                    //for i in dd
                     //check if any factor is equal to 0, set the whole thing to 0 if so
                     for i in 0..x.len() {
                         x[i].simplify();
                         if x[i].check_if_zero() {
                             *self = Expr::Constant((0.0).into());
                             return;
+                        }
+                        if x[i].check_if_variable(){
+                            let var_i = match x[i]{
+                                Self::Variable(c)=>c,
+                                _=>panic!("expected variable, found something else")
+                            };
+                            match vars_count.get_mut(&var_i){
+                                Some(var_i_count)=>{
+                                    *var_i_count+=1;
+                                }
+                                None=>{
+                                    vars_count.insert(var_i, 1);
+                                }
+                            };
                         }
                         if let Expr::Constant(ref c) = x[i] {
                             constants_count += 1;
@@ -269,6 +285,16 @@ where
                     if constants_exist {
                         res_factors.retain(|addend| addend.check_if_constant() == false);
                         res_factors.push(Expr::Constant(constants_sum));
+                    }
+                    for var_letter in vars_count.keys(){
+                        res_factors.retain(|factor| factor.check_if_variable()==false);
+                        res_factors.push(Expr::Operation(Box::new(
+                            Operation::Pow((
+                                Expr::Variable(*var_letter)
+                                ,
+                                Expr::Constant(T::from(*vars_count.get(var_letter).unwrap() as f64))
+                           ))
+                        )));
                     }
                     *self = Expr::Operation(Box::new(Operation::Mul(res_factors)));
                 }

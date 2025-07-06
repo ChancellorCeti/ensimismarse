@@ -5,14 +5,19 @@ pub mod structs;
 pub mod series;
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
     use structs::{Expr, Operation, TrigOp};
     #[test]
     fn test_legendre(){
         println!("{}",series::factorial(3,&mut std::collections::HashMap::new()));
-        let l:Vec<Vec<Expr<f64>>> = series::generate_associated_legendre_polynomials(2,2);
-        let mut a = l[2][2].clone();
+        let l:Vec<Expr<f64>>= series::generate_legendre_polynomials(5);
+        let mut a = l[5].clone();
         a.simplify();
+        let mut xval = HashMap::new();
+        xval.insert('x',2.0);
+        println!("val is {}",a.evaluate_expr(&xval));
         println!("{:?}",a.expr_to_string());
         // SUCCESS !!
     }

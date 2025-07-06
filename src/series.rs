@@ -1,4 +1,7 @@
-use crate::{differentiation::differentiate, structs::{Expr, Operation}};
+use crate::{
+    differentiation::differentiate,
+    structs::{Expr, Operation},
+};
 pub fn create_multipole_expansion<T>(_f: Expr<T>) -> Expr<T>
 where
     T: From<f64> + std::clone::Clone,
@@ -7,22 +10,33 @@ where
 }
 pub fn generate_associated_legendre_polynomials<T>(l_max: usize, m_max: usize) -> Vec<Vec<Expr<T>>>
 where
-    T: From<f64> + std::clone::Clone,
+    T: From<f64>
+        + std::clone::Clone
+        + std::ops::Add<Output = T>
+        + std::ops::Mul<Output = T>
+        + std::ops::Div<Output = T>
+        + std::ops::Sub<Output = T>
+        + std::cmp::PartialEq
+        + std::fmt::Debug,
+    f64: From<T>,
 {
     let mut factorial_cache = std::collections::HashMap::new();
     let mut res: Vec<Vec<Expr<T>>> = vec![vec![Expr::Constant(T::from(0.0)); m_max + 1]; l_max + 1];
     for l in 0..=l_max {
         for m in 0..=m_max {
-            let mut lm_deriv:Expr<T> = Expr::Operation(Box::new(Operation::Pow((
+            let mut lm_deriv: Expr<T> = Expr::Operation(Box::new(Operation::Pow((
                 Expr::Operation(Box::new(Operation::Add(vec![
-                    Expr::Operation(Box::new(Operation::Pow((Expr::Variable('x'),Expr::Constant(T::from(2.0f64)))))),
-                    Expr::Constant(T::from(-1.0))
-                ])))
-                ,
-                Expr::Constant(T::from(l as f64))
+                    Expr::Operation(Box::new(Operation::Pow((
+                        Expr::Variable('x'),
+                        Expr::Constant(T::from(2.0f64)),
+                    )))),
+                    Expr::Constant(T::from(-1.0)),
+                ]))),
+                Expr::Constant(T::from(l as f64)),
             ))));
-            for _i in 1..=(l+m){
+            for _i in 1..=(l + m) {
                 lm_deriv = differentiate(lm_deriv, 'x');
+                lm_deriv.simplify();
             }
             res[l][m] = Expr::Operation(Box::new(Operation::Mul(vec![
                 Expr::Constant(T::from(
@@ -32,19 +46,17 @@ where
                 Expr::Operation(Box::new(Operation::Pow((
                     Expr::Operation(Box::new(Operation::Add(vec![
                         Expr::Constant(T::from(1.0f64)),
-                        Expr::Operation(
-                            Box::new(
-                                Operation::Mul(vec![
-                                    Expr::Constant(T::from(-1.0f64)),
-
-                                    Expr::Operation(Box::new(Operation::Pow((Expr::Variable('x'),Expr::Constant(T::from(2.0f64))))))
-                                ])
-                            )
-                        )
+                        Expr::Operation(Box::new(Operation::Mul(vec![
+                            Expr::Constant(T::from(-1.0f64)),
+                            Expr::Operation(Box::new(Operation::Pow((
+                                Expr::Variable('x'),
+                                Expr::Constant(T::from(2.0f64)),
+                            )))),
+                        ]))),
                     ]))),
                     Expr::Constant(T::from((m as f64) / 2.0)),
                 )))),
-                lm_deriv
+                lm_deriv,
             ])))
         }
     }
@@ -75,6 +87,15 @@ where
         ])));
     }
     res
+}
+
+pub fn double_factorial(n: usize) -> f64 {
+    let mut res: f64 = 1.0f64;
+
+    for i in 0..=((n as f64) / 2.0).floor() as usize - 1 {
+        res *= n as f64 - 2.0 * i as f64;
+    }
+    return res;
 }
 
 pub fn factorial(n: usize, cache: &mut std::collections::HashMap<usize, f64>) -> f64 {
