@@ -40,7 +40,7 @@ where
             }
             res[l][m] = Expr::Operation(Box::new(Operation::Mul(vec![
                 Expr::Constant(T::from(
-                    ((1.0f64).powi(m as i32))
+                    ((-1.0f64).powi(m as i32))
                         / (2f64.powi(l as i32) * factorial(l, &mut factorial_cache)),
                 )),
                 Expr::Operation(Box::new(Operation::Pow((
@@ -106,7 +106,7 @@ pub fn factorial(n: usize, cache: &mut std::collections::HashMap<usize, f64>) ->
     let highest_key = *cache.keys().max().unwrap_or(&1);
     let mut res: f64 = *cache.get(&highest_key).unwrap();
 
-    for i in highest_key..=n {
+    for i in (highest_key + 1)..=n {
         res *= i as f64;
     }
     cache.insert(n, res);
