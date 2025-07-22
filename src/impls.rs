@@ -1,4 +1,4 @@
-use crate::structs::{ComplexNumber, Expr, HyperbolicOp, Operation, TrigOp};
+use crate::structs::{/*ComplexNumber,*/ Expr, HyperbolicOp, Operation, TrigOp};
 use std::collections::HashMap;
 
 impl<
@@ -50,6 +50,10 @@ where
                 }
                 Operation::Mul(x) => {
                     let mut res: String = String::new();
+                    if x.len() == 0 {
+                        println!("wtf");
+                        return "".to_string();
+                    }
                     for i in 0..x.len() - 1 {
                         if x[i].check_if_constant() || x[i].check_if_variable() {
                             res.push_str(x[i].expr_to_string().as_str());
@@ -153,6 +157,20 @@ where
             _ => false,
         }
     }
+
+    pub fn check_if_sum(&self) -> bool {
+        if let Expr::Operation(x) = self {
+            match *x.to_owned() {
+                Operation::Add(_x) => {
+                    return true;
+                }
+                _ => {
+                    return false;
+                }
+            }
+        }
+        return false;
+    }
     /*fn check_if_operation(&self) -> bool {
         if let Expr::Operation(_x) = self {
             return true;
@@ -248,7 +266,7 @@ where
                     let mut constants_exist = false;
                     let mut constants_count: usize = 0;
                     let mut constants_sum: T = (1.0).into();
-                    let mut vars_count: HashMap<char,usize> = HashMap::new();
+                    let mut vars_count: HashMap<char, usize> = HashMap::new();
                     //for i in dd
                     //check if any factor is equal to 0, set the whole thing to 0 if so
                     for i in 0..x.len() {
@@ -257,16 +275,16 @@ where
                             *self = Expr::Constant((0.0).into());
                             return;
                         }
-                        if x[i].check_if_variable(){
-                            let var_i = match x[i]{
-                                Self::Variable(c)=>c,
-                                _=>panic!("expected variable, found something else")
+                        if x[i].check_if_variable() {
+                            let var_i = match x[i] {
+                                Self::Variable(c) => c,
+                                _ => panic!("expected variable, found something else"),
                             };
-                            match vars_count.get_mut(&var_i){
-                                Some(var_i_count)=>{
-                                    *var_i_count+=1;
+                            match vars_count.get_mut(&var_i) {
+                                Some(var_i_count) => {
+                                    *var_i_count += 1;
                                 }
-                                None=>{
+                                None => {
                                     vars_count.insert(var_i, 1);
                                 }
                             };
@@ -286,15 +304,12 @@ where
                         res_factors.retain(|addend| addend.check_if_constant() == false);
                         res_factors.push(Expr::Constant(constants_sum));
                     }
-                    for var_letter in vars_count.keys(){
-                        res_factors.retain(|factor| factor.check_if_variable()==false);
-                        res_factors.push(Expr::Operation(Box::new(
-                            Operation::Pow((
-                                Expr::Variable(*var_letter)
-                                ,
-                                Expr::Constant(T::from(*vars_count.get(var_letter).unwrap() as f64))
-                           ))
-                        )));
+                    for var_letter in vars_count.keys() {
+                        res_factors.retain(|factor| factor.check_if_variable() == false);
+                        res_factors.push(Expr::Operation(Box::new(Operation::Pow((
+                            Expr::Variable(*var_letter),
+                            Expr::Constant(T::from(*vars_count.get(var_letter).unwrap() as f64)),
+                        )))));
                     }
                     *self = Expr::Operation(Box::new(Operation::Mul(res_factors)));
                 }
@@ -319,13 +334,13 @@ where
     }
     pub fn evaluate_expr(&self, variable_values: &HashMap<char, T>) -> T {
         match self {
-            Expr::ComplexNum(_z) => {T::from(0.0)}/*match *z.to_owned(){
-                ComplexNumber::Polar(z)=>{
-                    return T::from(0.0f64);
-                }
-                ComplexNumber::Cartesian(z)=>{
-                    return T::from(0.0f64);
-                }
+            Expr::ComplexNum(_z) => T::from(0.0), /*match *z.to_owned(){
+            ComplexNumber::Polar(z)=>{
+            return T::from(0.0f64);
+            }
+            ComplexNumber::Cartesian(z)=>{
+            return T::from(0.0f64);
+            }
             }*/
             Expr::Variable(x) => {
                 let var_desired = variable_values.get(x);

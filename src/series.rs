@@ -24,7 +24,7 @@ where
     let mut res: Vec<Vec<Expr<T>>> = vec![vec![Expr::Constant(T::from(0.0)); m_max + 1]; l_max + 1];
     for l in 0..=l_max {
         for m in 0..=m_max {
-            println!("{} {}",l,m);
+            println!("{} {}", l, m);
             let mut lm_deriv: Expr<T> = Expr::Operation(Box::new(Operation::Pow((
                 Expr::Operation(Box::new(Operation::Add(vec![
                     Expr::Operation(Box::new(Operation::Pow((

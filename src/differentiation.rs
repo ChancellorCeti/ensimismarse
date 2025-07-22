@@ -8,7 +8,7 @@ where
     res = Expr::Constant(T::from(0.0));
     let fc = f.clone();
     match f {
-        Expr::ComplexNum(_z)=>{
+        Expr::ComplexNum(_z) => {
             todo!()
         }
         Expr::Constant(_x) => {
@@ -34,7 +34,7 @@ where
             Operation::Pow(x) => {
                 res = Expr::Operation(Box::new(Operation::Mul(vec![
                     x.1.clone(),
-                    differentiate(x.0.clone(),v),
+                    differentiate(x.0.clone(), v),
                     Expr::Operation(Box::new(Operation::Pow((
                         x.0,
                         Expr::Operation(Box::new(Operation::Add(vec![

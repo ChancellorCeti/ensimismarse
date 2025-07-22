@@ -1,3 +1,5 @@
+#![feature(box_patterns)]
+#![feature(let_chains)]
 pub mod complex;
 pub mod differentiation;
 pub mod impls;
@@ -12,6 +14,18 @@ mod tests {
     use structs::{Expr, Operation, TrigOp};
     #[test]
     fn test_integration() {
+        let test_product = Expr::Operation(Box::new(Operation::Mul(vec![
+            Expr::Constant(2.0),
+            Expr::Operation(Box::new(Operation::Add(vec![
+                Expr::Variable('x'),
+                Expr::Constant(1.0),
+            ]))),
+            Expr::Operation(Box::new(Operation::Pow((
+                Expr::Variable('x'),
+                Expr::Constant(2.0f64),
+            )))),
+        ])));
+        println!("{}", test_product.expand_product().expr_to_string());
         let f: Expr<f64> = Expr::Operation(Box::new(Operation::Add(vec![Expr::Operation(
             Box::new(Operation::Mul(vec![
                 Expr::Constant(2.0),
@@ -19,15 +33,15 @@ mod tests {
                     Expr::Variable('x'),
                     Expr::Constant(2.0f64),
                 )))),
-                Expr::Operation(Box::new(Operation::Trig(TrigOp::Sin(
-                    Expr::Operation(Box::new(Operation::Mul(vec![
+                Expr::Operation(Box::new(Operation::Trig(TrigOp::Sin(Expr::Operation(
+                    Box::new(Operation::Mul(vec![
                         Expr::Constant(3.0),
-                        Expr::Variable('x')
-                    ])))
-                )))),
+                        Expr::Variable('x'),
+                    ])),
+                ))))),
             ])),
         )])));
-        println!("{:?}",f.integrate('x').expr_to_string());
+        println!("{:?}", f.integrate('x').expr_to_string());
     }
     #[test]
     fn test_legendre() {

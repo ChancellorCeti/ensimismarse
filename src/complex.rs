@@ -24,7 +24,9 @@ where
 {
     //pub fn modulus
 }
-impl<T:std::clone::Clone + std::ops::Add<Output = T>> std::ops::Add for ComplexNumCartesianForm<T> {
+impl<T: std::clone::Clone + std::ops::Add<Output = T>> std::ops::Add
+    for ComplexNumCartesianForm<T>
+{
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
@@ -34,24 +36,29 @@ impl<T:std::clone::Clone + std::ops::Add<Output = T>> std::ops::Add for ComplexN
         }
     }
 }
-impl<T:Copy + std::ops::Mul<Output = T> + std::ops::Sub<Output =T>> std::ops::Mul for ComplexNumCartesianForm<T> {
+impl<T: Copy + std::ops::Mul<Output = T> + std::ops::Sub<Output = T>> std::ops::Mul
+    for ComplexNumCartesianForm<T>
+{
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self {
         Self {
             real_part: self.real_part * rhs.real_part - self.imaginary_part * rhs.imaginary_part,
-            imaginary_part: self.real_part * rhs.imaginary_part - self.imaginary_part * rhs.real_part,
+            imaginary_part: self.real_part * rhs.imaginary_part
+                - self.imaginary_part * rhs.real_part,
         }
     }
 }
 
-impl<T:Copy + std::ops::Mul<Output = T> + std::ops::Add<Output =T>> std::ops::Mul for ComplexNumPolarForm<T> {
+impl<T: Copy + std::ops::Mul<Output = T> + std::ops::Add<Output = T>> std::ops::Mul
+    for ComplexNumPolarForm<T>
+{
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self {
         Self {
             modulus: self.modulus * rhs.modulus,
-            phase: self.phase + rhs.phase
+            phase: self.phase + rhs.phase,
         }
     }
 }
