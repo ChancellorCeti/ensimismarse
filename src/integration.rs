@@ -15,7 +15,8 @@ where
     f64: From<T>,
 {
     pub fn integrate(&self, variable: char) -> Expr<T> {
-        let expanded_form = self.expand_product().1;
+        let mut expanded_form = self.expand_product().1;
+        expanded_form.simplify();
         let cleaned_problems = expanded_form.use_integration_linearity(variable);
         if cleaned_problems.len() > 1 {
             let mut solutions = vec![Expr::Constant(T::from(0.0)); cleaned_problems.len()];
@@ -33,9 +34,58 @@ where
                     .collect(),
             )));
         }
+        let mut selfclone = self.clone();
+        selfclone.simplify();
+        match selfclone {
+            Expr::Constant(_c) => {
+                return Expr::Operation(Box::new(Operation::Mul(vec![
+                    self.clone(),
+                    Expr::Variable(variable),
+                ])))
+            }
+            Expr::Variable(v) => {
+                if v.clone() != variable {
+                    return Expr::Operation(Box::new(Operation::Mul(vec![
+                        self.clone(),
+                        Expr::Variable(variable),
+                    ])));
+                }
+                return Expr::Operation(Box::new(Operation::Mul(vec![
+                    Expr::Constant(T::from(0.5f64)),
+                    Expr::Operation(Box::new(Operation::Pow((
+                        Expr::Variable(variable),
+                        Expr::Constant(T::from(2.0)),
+                    )))),
+                ])));
+            }
+            Expr::ComplexNum(_c) => {
+                return Expr::Operation(Box::new(Operation::Mul(vec![
+                    self.clone(),
+                    Expr::Variable(variable),
+                ])))
+            }
+            Expr::Operation(some_op) => match *some_op.to_owned() {
+                Operation::Pow((base_expr, exponent_expr)) => {
+                    if let Expr::Variable(base_var) = base_expr {
+                        if let Expr::Constant(exponent_const) = exponent_expr
+                            && base_var == variable
+                        {
+                            return Expr::Operation(Box::new(Operation::Mul(vec![
+                                Expr::Operation(Box::new(Operation::Pow((
+                                    Expr::Variable(variable),
+                                    Expr::Constant(exponent_const.clone() + T::from(1.0)),
+                                )))),
+                                Expr::Constant(T::from(1.0) / (exponent_const + T::from(1.0))),
+                            ])));
+                        }
+                    }
+                }
+                _ => {
+                    return Expr::Constant(T::from(1.0f64));
+                }
+            },
+        }
         return Expr::Constant(T::from(1.0f64));
-        /*match self{
-        }*/
     }
     fn find_sum_in_product(factors: &Vec<Expr<T>>) -> (bool, usize, usize) {
         let mut first_sum_index = 0;

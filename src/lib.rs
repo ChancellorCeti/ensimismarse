@@ -81,7 +81,9 @@ mod tests {
                 ))))),
             ])),
         )])));*/
-        println!("{:?}", test_product.integrate('x').expr_to_string());
+        let mut int_res = test_product.integrate('x');
+        int_res.simplify();
+        println!("{:?}", int_res.expr_to_string());
     }
     #[test]
     fn test_legendre() {

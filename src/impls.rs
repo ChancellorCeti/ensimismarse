@@ -21,8 +21,8 @@ where
                 todo!()
             }
             Expr::Constant(x) => {
-                return f64::from(x.clone()).to_string();
-            }
+                 return format!("{:.3}", f64::from(x.clone()));
+           }
             Expr::Variable(x) => {
                 return x.to_string();
             }
@@ -284,6 +284,10 @@ where
                     *self = Expr::Operation(Box::new(Operation::Div((a, b))));
                 }
                 Operation::Mul(mut x) => {
+                    if x.len() == 1{
+                        *self = x[0].clone();
+                        return;
+                    }
                     let mut res_factors: Vec<Expr<T>> = Vec::new();
                     let mut constants_exist = false;
                     let mut constants_count: usize = 0;
