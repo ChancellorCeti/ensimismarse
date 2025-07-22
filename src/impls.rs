@@ -158,6 +158,28 @@ where
         }
     }
 
+    pub fn check_if_constant_power_of_x(&self) -> Option<(char, T)> {
+        if let Expr::Operation(x) = self {
+            match *x.to_owned() {
+                Operation::Pow((base, exponent)) => {
+                    if base.check_if_variable() && exponent.check_if_constant() {
+                        if let Expr::Variable(base_char) = base
+                            && let Expr::Constant(exponent_val) = exponent
+                        {
+                            return Some((base_char, exponent_val));
+                        } else {
+                            panic!("check_if_variable and check_if_constant failed");
+                        }
+                    }
+                    return None;
+                }
+                _ => {
+                    return None;
+                }
+            }
+        }
+        return None;
+    }
     pub fn check_if_sum(&self) -> bool {
         if let Expr::Operation(x) = self {
             match *x.to_owned() {
@@ -266,11 +288,14 @@ where
                     let mut constants_exist = false;
                     let mut constants_count: usize = 0;
                     let mut constants_sum: T = (1.0).into();
-                    let mut vars_count: HashMap<char, usize> = HashMap::new();
+                    let mut vars_count: HashMap<char, T> = HashMap::new();
                     //for i in dd
                     //check if any factor is equal to 0, set the whole thing to 0 if so
                     for i in 0..x.len() {
+                        let pow_of_variable = x[i].check_if_constant_power_of_x();
+                        //if pow_of_variable == None {
                         x[i].simplify();
+                        //}
                         if x[i].check_if_zero() {
                             *self = Expr::Constant((0.0).into());
                             return;
@@ -282,10 +307,20 @@ where
                             };
                             match vars_count.get_mut(&var_i) {
                                 Some(var_i_count) => {
-                                    *var_i_count += 1;
+                                    *var_i_count = var_i_count.clone() + T::from(1.0);
                                 }
                                 None => {
-                                    vars_count.insert(var_i, 1);
+                                    vars_count.insert(var_i, T::from(1.0));
+                                }
+                            };
+                        }
+                        if let Some((var_i, power_i)) = pow_of_variable {
+                            match vars_count.get_mut(&var_i) {
+                                Some(var_i_count) => {
+                                    *var_i_count = power_i + var_i_count.clone();
+                                }
+                                None => {
+                                    vars_count.insert(var_i, power_i);
                                 }
                             };
                         }
@@ -302,14 +337,22 @@ where
                     }
                     if constants_exist {
                         res_factors.retain(|addend| addend.check_if_constant() == false);
-                        res_factors.push(Expr::Constant(constants_sum));
+                        if constants_sum != T::from(1.0) {
+                            res_factors.push(Expr::Constant(constants_sum));
+                        }
                     }
+                    res_factors.retain(|factor| None == factor.check_if_constant_power_of_x());
+                    res_factors.retain(|factor| factor.check_if_variable() == false);
                     for var_letter in vars_count.keys() {
-                        res_factors.retain(|factor| factor.check_if_variable() == false);
-                        res_factors.push(Expr::Operation(Box::new(Operation::Pow((
-                            Expr::Variable(*var_letter),
-                            Expr::Constant(T::from(*vars_count.get(var_letter).unwrap() as f64)),
-                        )))));
+                        let var_i_power = vars_count.get(var_letter).unwrap().clone();
+                        if var_i_power != T::from(1.0) {
+                            res_factors.push(Expr::Operation(Box::new(Operation::Pow((
+                                Expr::Variable(*var_letter),
+                                Expr::Constant(vars_count.get(var_letter).unwrap().clone()),
+                            )))));
+                        } else {
+                            res_factors.push(Expr::Variable(var_letter.clone()));
+                        }
                     }
                     *self = Expr::Operation(Box::new(Operation::Mul(res_factors)));
                 }

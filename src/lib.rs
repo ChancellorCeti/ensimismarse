@@ -31,6 +31,20 @@ mod tests {
         ])));
         test_func.simplify();
         println!("yahah {}", test_func.expr_to_string());
+        let mut test_func2 = Expr::Operation(Box::new(Operation::Mul(vec![
+            Expr::Variable('x'),
+            Expr::Operation(Box::new(Operation::Pow((
+                Expr::Variable('x'),
+                Expr::Constant(2.0f64),
+            )))),
+            Expr::Constant(2.0),
+            Expr::Operation(Box::new(Operation::Pow((
+                Expr::Variable('x'),
+                Expr::Constant(2.0f64),
+            )))),
+        ])));
+        test_func2.simplify();
+        println!("yahah {}", test_func2.expr_to_string());
     }
     #[test]
     fn test_integration() {
@@ -49,7 +63,9 @@ mod tests {
                 Expr::Constant(2.0),
             ]))),
         ])));
-        println!("yahah {}", test_product.expand_product().1.expr_to_string());
+        let simp_res = test_product.expand_product().1;
+        //simp_res.simplify();
+        println!("yahah {}", simp_res.expr_to_string());
         let f: Expr<f64> = Expr::Operation(Box::new(Operation::Add(vec![Expr::Operation(
             Box::new(Operation::Mul(vec![
                 Expr::Constant(2.0),

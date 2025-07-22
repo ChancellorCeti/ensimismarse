@@ -1,5 +1,3 @@
-use std::fs::exists;
-
 use crate::structs::{Expr, Operation};
 
 impl<
@@ -49,7 +47,9 @@ where
         if let Expr::Operation(box Operation::Mul(factors)) = self {
             let (sum_exists, first_sum_index, sum_count) = Self::find_sum_in_product(factors);
             if sum_exists == false {
-                return (false, self.clone());
+                let mut selfclone = self.clone();
+                selfclone.simplify();
+                return (false, selfclone);
             }
             let sum_a = factors[first_sum_index].clone();
             let mut other_factors = factors.clone();
