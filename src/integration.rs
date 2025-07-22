@@ -1,3 +1,5 @@
+use std::fs::exists;
+
 use crate::structs::{Expr, Operation};
 
 impl<
@@ -23,32 +25,69 @@ where
         /*match self{
         }*/
     }
-    pub fn expand_product(&self) -> Self {
+    fn find_sum_in_product(factors: &Vec<Expr<T>>) -> (bool, usize, usize) {
+        let mut first_sum_index = 0;
+        let mut sum_exists = false;
+        let mut sum_count: usize = 0;
+        for i in 0..factors.len() {
+            if factors[i].check_if_sum() && sum_count == 0 {
+                if sum_count == 0 {
+                    sum_count += 1;
+                    first_sum_index = i;
+                    sum_exists = true;
+                }
+                if sum_count > 0 {
+                    sum_count += 1;
+                    break;
+                }
+            }
+        }
+        return (sum_exists, first_sum_index, sum_count);
+    }
+    //returns (bool,Self) where bool is true if there was a sum that needed expanding, true if not
+    pub fn expand_product(&self) -> (bool, Self) {
         if let Expr::Operation(box Operation::Mul(factors)) = self {
-            /*let mut non_sum_factors: Vec<Expr<T>> = factors.clone();
-            non_sum_factors.retain(|factor| factor.check_if_sum() == false);*/
-            let mut sum_factors: Vec<Expr<T>> = factors.clone();
-            sum_factors.retain(|factor| factor.check_if_sum() == true);
+            let (sum_exists, first_sum_index, sum_count) = Self::find_sum_in_product(factors);
+            if sum_exists == false {
+                return (false, self.clone());
+            }
+            let sum_a = factors[first_sum_index].clone();
+            let mut other_factors = factors.clone();
+            other_factors.remove(first_sum_index);
             // TO-DO: CHANGE CODE SO THE OTHER FACTOR IN NEW ELEMENTS OF RES_ADDENDS IS FACTORS BUT
             // WITHOUT THE SUM_A_ADDENDS
             let mut res_addends: Vec<Expr<T>> = vec![];
-            if let Expr::Operation(box Operation::Add(sum_a_addends)) = &sum_factors[0] {
+            if let Expr::Operation(box Operation::Add(sum_a_addends)) = sum_a {
                 for i in 0..sum_a_addends.len() {
-                    res_addends.push(Expr::Operation(Box::new(Operation::Mul(vec![
-                        sum_a_addends[i].clone(),
-                    ]))))
+                    let mut other_factors_clone_i = other_factors.clone();
+                    other_factors_clone_i.push(sum_a_addends[i].clone());
+                    res_addends.push(Expr::Operation(Box::new(Operation::Mul(
+                        other_factors_clone_i,
+                    ))))
                 }
             } else {
                 panic!()
             };
-            for _i in 0..sum_factors.len() {
-                /*res_addends.push(
-                    Expr::Operation(Box::new(Operation::Mul(vec![
-                        factors[i].clone()
-                    ])))
-                )*/
+            let mut res = (
+                true,
+                Expr::Operation(Box::new(Operation::Add(res_addends.clone()))),
+            );
+            res.1.simplify();
+            if sum_count > 1 {
+                let mut unsimplified_res = (
+                    true,
+                    Expr::Operation(Box::new(Operation::Add(
+                        res_addends
+                            .iter()
+                            .map(|addend| addend.clone().expand_product().1)
+                            .collect(),
+                    ))),
+                );
+                unsimplified_res.1.simplify();
+                unsimplified_res
+            } else {
+                return res;
             }
-            return Expr::Operation(Box::new(Operation::Mul(res_addends)));
         } else {
             panic!("Expected product, found {}", self.expr_to_string());
         }

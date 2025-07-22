@@ -13,6 +13,26 @@ mod tests {
     use super::*;
     use structs::{Expr, Operation, TrigOp};
     #[test]
+    fn test_simplification() {
+        let mut test_func = Expr::Operation(Box::new(Operation::Add(vec![
+            Expr::Operation(Box::new(Operation::Mul(vec![
+                Expr::Variable('x'),
+                Expr::Constant(1.0),
+                Expr::Constant(2.0),
+            ]))),
+            Expr::Operation(Box::new(Operation::Pow((
+                Expr::Variable('x'),
+                Expr::Constant(2.0f64),
+            )))),
+            Expr::Operation(Box::new(Operation::Add(vec![
+                Expr::Variable('a'),
+                Expr::Constant(2.0),
+            ]))),
+        ])));
+        test_func.simplify();
+        println!("yahah {}", test_func.expr_to_string());
+    }
+    #[test]
     fn test_integration() {
         let test_product = Expr::Operation(Box::new(Operation::Mul(vec![
             Expr::Constant(2.0),
@@ -24,8 +44,12 @@ mod tests {
                 Expr::Variable('x'),
                 Expr::Constant(2.0f64),
             )))),
+            Expr::Operation(Box::new(Operation::Add(vec![
+                Expr::Variable('a'),
+                Expr::Constant(2.0),
+            ]))),
         ])));
-        println!("{}", test_product.expand_product().expr_to_string());
+        println!("yahah {}", test_product.expand_product().1.expr_to_string());
         let f: Expr<f64> = Expr::Operation(Box::new(Operation::Add(vec![Expr::Operation(
             Box::new(Operation::Mul(vec![
                 Expr::Constant(2.0),
