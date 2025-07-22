@@ -1,4 +1,4 @@
-use crate::structs::{Expr, HyperbolicOp, Operation, TrigOp};
+use crate::structs::{ComplexNumber, Expr, HyperbolicOp, Operation, TrigOp};
 use std::collections::HashMap;
 
 impl<
@@ -140,7 +140,7 @@ where
             _ => false,
         }
     }
-    fn check_if_constant(&self) -> bool {
+    pub fn check_if_constant(&self) -> bool {
         /*if let Expr::Constant(x) = self {
             true
         } else {
@@ -319,9 +319,14 @@ where
     }
     pub fn evaluate_expr(&self, variable_values: &HashMap<char, T>) -> T {
         match self {
-            Expr::ComplexNum(_z) => {
-                todo!()
-            }
+            Expr::ComplexNum(_z) => {T::from(0.0)}/*match *z.to_owned(){
+                ComplexNumber::Polar(z)=>{
+                    return T::from(0.0f64);
+                }
+                ComplexNumber::Cartesian(z)=>{
+                    return T::from(0.0f64);
+                }
+            }*/
             Expr::Variable(x) => {
                 let var_desired = variable_values.get(x);
                 match var_desired {
