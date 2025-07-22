@@ -63,10 +63,10 @@ mod tests {
                 Expr::Constant(2.0),
             ]))),
         ])));
-        let simp_res = test_product.expand_product().1;
+        //let simp_res = test_product.expand_product().1;
         //simp_res.simplify();
-        println!("yahah {}", simp_res.expr_to_string());
-        let f: Expr<f64> = Expr::Operation(Box::new(Operation::Add(vec![Expr::Operation(
+        //println!("yahah {}", simp_res.expr_to_string());
+        /*let f: Expr<f64> = Expr::Operation(Box::new(Operation::Add(vec![Expr::Operation(
             Box::new(Operation::Mul(vec![
                 Expr::Constant(2.0),
                 Expr::Operation(Box::new(Operation::Pow((
@@ -80,8 +80,8 @@ mod tests {
                     ])),
                 ))))),
             ])),
-        )])));
-        println!("{:?}", f.integrate('x').expr_to_string());
+        )])));*/
+        println!("{:?}", test_product.integrate('x').expr_to_string());
     }
     #[test]
     fn test_legendre() {

@@ -14,12 +14,26 @@ impl<
 where
     f64: From<T>,
 {
-    pub fn integrate(&self, _variable: char) -> Expr<T> {
-        println!(
-            "ee {:#?}",
-            self.use_integration_linearity()[0].0 /*.expr_to_string()*/
-        );
-        return Expr::Constant(T::from(0.0f64));
+    pub fn integrate(&self, variable: char) -> Expr<T> {
+        let expanded_form = self.expand_product().1;
+        let cleaned_problems = expanded_form.use_integration_linearity(variable);
+        if cleaned_problems.len() > 1 {
+            let mut solutions = vec![Expr::Constant(T::from(0.0)); cleaned_problems.len()];
+            for i in 0..cleaned_problems.len() {
+                solutions[i] = cleaned_problems[i].1.integrate(variable);
+            }
+            return Expr::Operation(Box::new(Operation::Add(
+                (0..cleaned_problems.len())
+                    .map(|i| {
+                        Expr::Operation(Box::new(Operation::Mul(vec![
+                            cleaned_problems[i].0.clone(),
+                            solutions[i].clone(),
+                        ])))
+                    })
+                    .collect(),
+            )));
+        }
+        return Expr::Constant(T::from(1.0f64));
         /*match self{
         }*/
     }
@@ -92,25 +106,25 @@ where
             panic!("Expected product, found {}", self.expr_to_string());
         }
     }
-    fn use_integration_linearity(&self) -> Vec<(T, Expr<T>)> {
+    fn use_integration_linearity(&self, variable: char) -> Vec<(Expr<T>, Expr<T>)> {
         match self {
-            Expr::Variable(_x) => return vec![(T::from(1.0), self.clone())],
-            Expr::Constant(_x) => return vec![(T::from(1.0), self.clone())],
-            Expr::ComplexNum(_x) => return vec![(T::from(1.0), self.clone())],
+            Expr::Variable(_x) => return vec![(Expr::Constant(T::from(1.0)), self.clone())],
+            Expr::Constant(_x) => return vec![(Expr::Constant(T::from(1.0)), self.clone())],
+            Expr::ComplexNum(_x) => return vec![(Expr::Constant(T::from(1.0)), self.clone())],
             Expr::Operation(op) => match *op.to_owned() {
                 Operation::Add(x) => {
                     return x
                         .clone()
                         .iter()
-                        .map(|xi| xi.clone().use_integration_linearity())
+                        .map(|xi| xi.clone().use_integration_linearity(variable))
                         .flatten()
                         .collect();
                 }
                 Operation::Sub(x) => {
                     return vec![
-                        (T::from(1.0), x.0),
+                        (Expr::Constant(T::from(1.0)), x.0),
                         (
-                            T::from(1.0),
+                            Expr::Constant(T::from(1.0)),
                             Expr::Operation(Box::new(Operation::Mul(vec![
                                 Expr::Constant(T::from(-1.0)),
                                 x.1,
@@ -121,24 +135,60 @@ where
                 Operation::Mul(x) => {
                     let mut constants_product: T = T::from(1.0);
                     let mut constants_exist = false;
+                    let mut constants_variables: Vec<Expr<T>> = vec![];
                     for i in 0..x.len() {
                         if let Expr::Constant(c) = &x[i] {
                             constants_exist = true;
                             constants_product = constants_product * c.clone();
                         }
+                        if let Expr::Variable(c) = &x[i]
+                            && *c != variable
+                        {
+                            constants_exist = true;
+                            constants_variables.push(x[i].clone());
+                        }
+                        if let Some((variable_i, _power_i)) = x[i].check_if_constant_power_of_x() {
+                            if variable_i != variable {
+                                constants_variables.push(x[i].clone());
+                            }
+                        }
                     }
+
+                    constants_variables.push(Expr::Constant(constants_product));
                     let mut res = x.clone();
+                    let mut constants_product_expr =
+                        Expr::Operation(Box::new(Operation::Mul(constants_variables)));
+                    constants_product_expr.simplify();
                     if constants_exist {
                         res.retain(|factor| factor.check_if_constant() == false);
+                        res.retain(|expr| {
+                            if let Expr::Operation(box Operation::Pow((base, _exponent))) = expr {
+                                if let Expr::Variable(var_name) = base {
+                                    return var_name == &variable;
+                                }
+                            }
+                            // Remove anything that doesn't match the pattern or has a different var name
+                            false
+                        });
+
+                        /*for i in 0..res.len(){
+                            if let Expr::Operation(box Operation::Pow((base,_exponent)))=res[i]{
+                                if let Expr::Variable(var_name) = base{
+                                    if var_name!=variable{
+
+                                    }
+                                }
+                            }
+                        }*/
                     }
 
                     return vec![(
-                        constants_product,
+                        constants_product_expr,
                         Expr::Operation(Box::new(Operation::Mul(res))),
                     )];
                 }
                 _ => {
-                    return vec![(T::from(1.0), self.clone())];
+                    return vec![(Expr::Constant(T::from(1.0)), self.clone())];
                 }
             },
         }
