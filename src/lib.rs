@@ -9,9 +9,44 @@ pub mod structs;
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+    use std::f64;
 
     use super::*;
+    use complex::*;
+    use structs::ComplexNumber;
     use structs::{Expr, Operation, TrigOp};
+    #[test]
+    fn test_complex() {
+        let mut test_func: Expr<f64> = Expr::Operation(Box::new(Operation::Mul(vec![
+            /*Expr::Operation(Box::new(Operation::Mul(vec![
+                Expr::Variable('x'),
+                Expr::Constant(1.0),
+                Expr::Constant(2.0),
+            ]))),*/
+            Expr::Variable('x'),
+            Expr::ComplexNum(Box::new(ComplexNumber::Cartesian(
+                complex::ComplexNumCartesianForm {
+                    real_part: 2.0,
+                    imaginary_part: -1.0,
+                },
+            ))),
+            Expr::ComplexNum(Box::new(ComplexNumber::Polar(
+                complex::ComplexNumPolarForm {
+                    modulus: 2.0,
+                    phase: f64::consts::FRAC_PI_2,
+                },
+            ))),
+        ])));
+        let mut xval = HashMap::new();
+        xval.insert(
+            'x',
+            ComplexNumber::Polar(complex::ComplexNumPolarForm {
+                modulus: 4.0,
+                phase: f64::consts::FRAC_PI_4,
+            }),
+        );
+        println!("val is {:?}", test_func.evaluate_complex_expr(&xval));
+    }
     #[test]
     fn test_simplification() {
         let mut test_func = Expr::Operation(Box::new(Operation::Add(vec![
