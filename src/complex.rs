@@ -1,3 +1,4 @@
+use crate::structs::{ComplexNumber, Expr};
 #[derive(Debug, Clone, Copy)]
 pub struct ComplexNumCartesianForm<T: Clone> {
     pub real_part: T,
@@ -43,6 +44,15 @@ impl<
 where
     f64: From<T>,
 {
+    pub fn create_cartesian_complex_num(a: T, b: T) -> Expr<T> {
+        Expr::ComplexNum(Box::new(ComplexNumber::Cartesian(
+            ComplexNumCartesianForm {
+                real_part: a,
+                imaginary_part: b,
+            },
+        )))
+    }
+
     pub fn to_polar(&self) -> ComplexNumPolarForm<T> {
         let modulus = T::from(
             f64::from(
@@ -94,6 +104,18 @@ impl<T: std::clone::Clone + std::ops::Mul<Output = T> + std::ops::Add<Output = T
         Self {
             modulus: self.modulus * rhs.modulus,
             phase: self.phase + rhs.phase,
+        }
+    }
+}
+impl<T: std::clone::Clone + std::ops::Div<Output = T> + std::ops::Sub<Output = T>> std::ops::Div
+    for ComplexNumPolarForm<T>
+{
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self {
+        Self {
+            modulus: self.modulus / rhs.modulus,
+            phase: self.phase - rhs.phase,
         }
     }
 }

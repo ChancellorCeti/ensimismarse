@@ -12,12 +12,12 @@ mod tests {
     use std::f64;
 
     use super::*;
-    use complex::*;
+    //use complex::*;
     use structs::ComplexNumber;
     use structs::{Expr, Operation, TrigOp};
     #[test]
     fn test_complex() {
-        let mut test_func: Expr<f64> = Expr::Operation(Box::new(Operation::Mul(vec![
+        let test_funca: Expr<f64> = Expr::Operation(Box::new(Operation::Mul(vec![
             /*Expr::Operation(Box::new(Operation::Mul(vec![
                 Expr::Variable('x'),
                 Expr::Constant(1.0),
@@ -26,7 +26,7 @@ mod tests {
             Expr::Variable('x'),
             Expr::ComplexNum(Box::new(ComplexNumber::Cartesian(
                 complex::ComplexNumCartesianForm {
-                    real_part: 2.0,
+                    real_part: -2.0,
                     imaginary_part: -1.0,
                 },
             ))),
@@ -37,12 +37,21 @@ mod tests {
                 },
             ))),
         ])));
+        let test_func: Expr<f64> =
+            Expr::Operation(Box::new(Operation::Div((test_funca, Expr::Variable('y')))));
         let mut xval = HashMap::new();
         xval.insert(
             'x',
             ComplexNumber::Polar(complex::ComplexNumPolarForm {
                 modulus: 4.0,
                 phase: f64::consts::FRAC_PI_4,
+            }),
+        );
+        xval.insert(
+            'y',
+            ComplexNumber::Cartesian(complex::ComplexNumCartesianForm {
+                real_part: 2.0,
+                imaginary_part: -5.0,
             }),
         );
         println!("val is {:?}", test_func.evaluate_complex_expr(&xval));

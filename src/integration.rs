@@ -80,8 +80,7 @@ where
                         }
                     }
                 }
-                Operation::Exp(_x)=>{
-                }
+                Operation::Exp(_x) => {}
                 _ => {
                     return Expr::Constant(T::from(1.0f64));
                 }

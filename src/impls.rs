@@ -1,5 +1,6 @@
+use crate::complex::ComplexNumCartesianForm;
 use crate::complex::*;
-use crate::structs::{/*ComplexNumber,*/ ComplexNumber, Expr, HyperbolicOp, Operation, TrigOp,};
+use crate::structs::{ComplexNumber, Expr, HyperbolicOp, Operation, TrigOp};
 use std::collections::HashMap;
 
 impl<
@@ -16,6 +17,61 @@ impl<
 where
     f64: From<T>,
 {
+    fn create_sum(addends: Vec<Self>) -> Self {
+        Expr::Operation(Box::new(Operation::Add(addends)))
+    }
+    fn create_mul(factors: Vec<Self>) -> Self {
+        Expr::Operation(Box::new(Operation::Mul(factors)))
+    }
+    fn create_exp(argument: Self) -> Self {
+        Expr::Operation(Box::new(Operation::Exp(argument)))
+    }
+    pub fn create_complex_cosine_expr(&self) -> Self {
+        Expr::Operation(Box::new(Operation::Div((
+            Self::create_sum(vec![
+                Self::create_exp(Self::create_mul(vec![
+                    ComplexNumCartesianForm::create_cartesian_complex_num(
+                        T::from(0.0),
+                        T::from(1.0),
+                    ),
+                    self.clone(),
+                ])),
+                Self::create_exp(Self::create_mul(vec![
+                    ComplexNumCartesianForm::create_cartesian_complex_num(
+                        T::from(0.0),
+                        T::from(-1.0),
+                    ),
+                    self.clone(),
+                ])),
+            ]),
+            Expr::Constant(T::from(2.0)),
+        ))))
+    }
+
+    pub fn create_complex_sine_expr(&self) -> Self {
+        Expr::Operation(Box::new(Operation::Div((
+            Self::create_sum(vec![
+                Self::create_exp(Self::create_mul(vec![
+                    ComplexNumCartesianForm::create_cartesian_complex_num(
+                        T::from(0.0),
+                        T::from(1.0),
+                    ),
+                    self.clone(),
+                ])),
+                Self::create_mul(vec![
+                    Expr::Constant(T::from(-1.0)),
+                    Self::create_exp(Self::create_mul(vec![
+                        ComplexNumCartesianForm::create_cartesian_complex_num(
+                            T::from(0.0),
+                            T::from(-1.0),
+                        ),
+                        self.clone(),
+                    ])),
+                ]),
+            ]),
+            ComplexNumCartesianForm::create_cartesian_complex_num(T::from(0.0), T::from(2.0)),
+        ))))
+    }
     pub fn expr_to_string(&self) -> String {
         match self {
             Expr::ComplexNum(_z) => {
@@ -52,8 +108,7 @@ where
                 Operation::Mul(x) => {
                     let mut res: String = String::new();
                     if x.len() == 0 {
-                        println!("wtf");
-                        return "".to_string();
+                        panic!("found a product with zero terms in it... strange");
                     }
                     for i in 0..x.len() - 1 {
                         if x[i].check_if_constant() || x[i].check_if_variable() {
@@ -146,11 +201,6 @@ where
         }
     }
     pub fn check_if_constant(&self) -> bool {
-        /*if let Expr::Constant(x) = self {
-            true
-        } else {
-            false
-        }*/
         match self {
             Expr::Constant(_x) => {
                 return true;
@@ -194,19 +244,13 @@ where
         }
         return false;
     }
-    /*fn check_if_operation(&self) -> bool {
-        if let Expr::Operation(_x) = self {
-            return true;
-        }
-        return false;
-    }*/
     fn check_if_variable(&self) -> bool {
         if let Expr::Variable(_x) = self {
             return true;
         }
         return false;
     }
-    /*fn extract_operation(&self) -> Operation<T> {
+    fn _extract_operation(&self) -> Operation<T> {
         match self {
             Expr::Operation(x) => {
                 let x_unboxed = *x.to_owned();
@@ -216,7 +260,7 @@ where
                 panic!("not an operation lol")
             }
         }
-    }*/
+    }
     pub fn simplify(&mut self) {
         match self {
             Expr::ComplexNum(_z) => {
@@ -382,14 +426,7 @@ where
     }
     pub fn evaluate_expr(&self, variable_values: &HashMap<char, T>) -> T {
         match self {
-            Expr::ComplexNum(_z) => T::from(0.0), /*match *z.to_owned(){
-            ComplexNumber::Polar(z)=>{
-            return T::from(0.0f64);
-            }
-            ComplexNumber::Cartesian(z)=>{
-            return T::from(0.0f64);
-            }
-            }*/
+            Expr::ComplexNum(_z) => panic!("found a complex number when using evaluate_expr. please use evaluate_complex_expr if complex numbers might appear in a calculation"),
             Expr::Variable(x) => {
                 let var_desired = variable_values.get(x);
                 match var_desired {
@@ -536,88 +573,43 @@ where
                     }
                     return ComplexNumber::Polar(res);
                 }
+                Operation::Div((x, y)) => {
+                    let x_eval = x.evaluate_complex_expr(variable_values);
+                    let y_eval = y.evaluate_complex_expr(variable_values);
+                    let zx_polar = match x_eval {
+                        ComplexNumber::Polar(ref z) => z.clone(),
+                        ComplexNumber::Cartesian(ref z) => z.to_polar(),
+                    };
+
+                    let zy_polar = match y_eval {
+                        ComplexNumber::Polar(ref z) => z.clone(),
+                        ComplexNumber::Cartesian(ref z) => z.to_polar(),
+                    };
+
+                    return ComplexNumber::Polar(zx_polar / zy_polar);
+                }
+                Operation::Exp(x) => {
+                    let x_eval = x.evaluate_complex_expr(variable_values);
+                    let x_cartesian = match x_eval {
+                        ComplexNumber::Polar(ref z) => z.to_cartesian(),
+                        ComplexNumber::Cartesian(ref z) => z.clone(),
+                    };
+                    return ComplexNumber::Polar(ComplexNumPolarForm {
+                        modulus: T::from(f64::from(x_cartesian.real_part).exp()),
+                        phase: x_cartesian.imaginary_part,
+                    });
+                }
+                Operation::Trig(TrigOp::Sin(x)) => x
+                    .create_complex_sine_expr()
+                    .evaluate_complex_expr(variable_values),
+                Operation::Trig(TrigOp::Cos(x)) => x
+                    .create_complex_cosine_expr()
+                    .evaluate_complex_expr(variable_values),
                 _ => ComplexNumber::Cartesian(ComplexNumCartesianForm {
                     real_part: T::from(0.0),
                     imaginary_part: T::from(0.0),
                 }),
             },
-            /*Expr::Operation(x) => match *x.to_owned() {
-                Operation::Add(x) => {
-                    let mut res: T = (0.0).into();
-                    for i in 0..x.len() {
-                        res = x[i].evaluate_expr(variable_values) + res;
-                    }
-                    return res;
-                }
-                Operation::Mul(x) => {
-                    let mut res: T = (1.0).into();
-                    for i in 0..x.len() {
-                        res = x[i].evaluate_expr(variable_values) * res;
-                    }
-                    return res;
-                }
-                Operation::Div((a, b)) => {
-                    return a.evaluate_expr(variable_values) / b.evaluate_expr(variable_values);
-                }
-                Operation::Pow((a, b)) => {
-                    return f64::from(a.evaluate_expr(variable_values))
-                        .powf(f64::from(b.evaluate_expr(variable_values)))
-                        .into();
-                }
-                Operation::Log(x) => {
-                    return f64::from(x.evaluate_expr(variable_values)).ln().into();
-                }
-                Operation::Exp(x) => {
-                    return f64::from(x.evaluate_expr(variable_values)).exp().into();
-                }
-                Operation::Sub((a, b)) => {
-                    return a.evaluate_expr(variable_values) - b.evaluate_expr(variable_values);
-                }
-                Operation::Sqrt(x) => {
-                    return f64::from(x.evaluate_expr(variable_values)).sqrt().into();
-                }
-                Operation::NthRoot((a, b)) => {
-                    return f64::from(b.evaluate_expr(variable_values))
-                        .powf(1.0 / a)
-                        .into();
-                }
-                Operation::Trig(TrigOp::Sin(x)) => {
-                    return f64::from(x.evaluate_expr(variable_values)).sin().into();
-                }
-                Operation::Trig(TrigOp::Cos(x)) => {
-                    return f64::from(x.evaluate_expr(variable_values)).cos().into();
-                }
-                Operation::Trig(TrigOp::Tan(x)) => {
-                    return f64::from(x.evaluate_expr(variable_values)).tan().into();
-                }
-                Operation::Trig(TrigOp::Sec(x)) => {
-                    return (1.0 / f64::from(x.evaluate_expr(variable_values)).cos()).into();
-                }
-                Operation::Trig(TrigOp::Csc(x)) => {
-                    return (1.0 / f64::from(x.evaluate_expr(variable_values)).sin()).into();
-                }
-                Operation::Trig(TrigOp::Cot(x)) => {
-                    return (1.0 / f64::from(x.evaluate_expr(variable_values)).tan()).into();
-                }
-                Operation::Hyperbolic(HyperbolicOp::Sinh(x)) => {
-                    return f64::from(x.evaluate_expr(variable_values)).sinh().into();
-                }
-                Operation::Hyperbolic(HyperbolicOp::Cosh(x)) => {
-                    return f64::from(x.evaluate_expr(variable_values)).cosh().into();
-                }
-                Operation::Hyperbolic(HyperbolicOp::Tanh(x)) => {
-                    return f64::from(x.evaluate_expr(variable_values)).tanh().into();
-                }
-                Operation::Hyperbolic(HyperbolicOp::Csch(x)) => {
-                    return (1.0 / f64::from(x.evaluate_expr(variable_values)).sinh()).into();
-                }
-                Operation::Hyperbolic(HyperbolicOp::Sech(x)) => {
-                    return (1.0 / f64::from(x.evaluate_expr(variable_values)).cosh()).into();
-                }
-                Operation::Hyperbolic(HyperbolicOp::Coth(x)) => {
-                    return (1.0 / f64::from(x.evaluate_expr(variable_values)).tanh()).into();
-                }
-            },*/
         }
     }
 }
