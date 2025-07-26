@@ -17,13 +17,13 @@ impl<
 where
     f64: From<T>,
 {
-    fn create_sum(addends: Vec<Self>) -> Self {
+    pub fn create_sum(addends: Vec<Self>) -> Self {
         Expr::Operation(Box::new(Operation::Add(addends)))
     }
-    fn create_mul(factors: Vec<Self>) -> Self {
+    pub fn create_mul(factors: Vec<Self>) -> Self {
         Expr::Operation(Box::new(Operation::Mul(factors)))
     }
-    fn create_exp(argument: Self) -> Self {
+    pub fn create_exp(argument: Self) -> Self {
         Expr::Operation(Box::new(Operation::Exp(argument)))
     }
     pub fn create_complex_cosine_expr(&self) -> Self {
@@ -208,6 +208,17 @@ where
             _ => false,
         }
     }
+    pub fn check_if_complex_constant(&self) -> bool {
+        match self {
+            Expr::Constant(_x) => {
+                return true;
+            }
+            Expr::ComplexNum(_z) => {
+                return true;
+            }
+            _ => false,
+        }
+    }
 
     pub fn check_if_constant_power_of_x(&self) -> Option<(char, T)> {
         if let Expr::Operation(x) = self {
@@ -324,6 +335,32 @@ where
                     // functions
                     if a.check_if_zero() {
                         *self = Expr::Constant((0.0).into());
+                        return;
+                    }
+                    if b.check_if_complex_constant() {
+                        let reciprocal_of_b: Self = match &b {
+                            Expr::Constant(x) => Expr::Constant(T::from(1.0) / x.clone()),
+                            Expr::ComplexNum(z) => match *z.to_owned() {
+                                ComplexNumber::Cartesian(z_cartesian) => {
+                                    Expr::ComplexNum(Box::new(ComplexNumber::Polar(
+                                        ComplexNumPolarForm {
+                                            modulus: T::from(1.0),
+                                            phase: T::from(0.0),
+                                        } / z_cartesian.to_polar(),
+                                    )))
+                                }
+                                ComplexNumber::Polar(z_polar) => {
+                                    Expr::ComplexNum(Box::new(ComplexNumber::Polar(
+                                        ComplexNumPolarForm {
+                                            modulus: T::from(1.0),
+                                            phase: T::from(0.0),
+                                        } / z_polar,
+                                    )))
+                                }
+                            },
+                            _ => panic!(),
+                        };
+                        *self = Expr::create_mul(vec![a, reciprocal_of_b]);
                         return;
                     }
                     *self = Expr::Operation(Box::new(Operation::Div((a, b))));

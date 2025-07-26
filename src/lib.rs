@@ -11,12 +11,15 @@ mod tests {
     use std::collections::HashMap;
     use std::f64;
 
+    // use crate::complex::ComplexNumCartesianForm;
+
     use super::*;
     //use complex::*;
     use structs::ComplexNumber;
     use structs::{Expr, Operation, TrigOp};
     #[test]
     fn test_complex() {
+        let test_exp: Expr<f64> = Expr::Operation(Box::new(Operation::Exp(Expr::Variable('x'))));
         let test_funca: Expr<f64> = Expr::Operation(Box::new(Operation::Mul(vec![
             /*Expr::Operation(Box::new(Operation::Mul(vec![
                 Expr::Variable('x'),
@@ -55,6 +58,7 @@ mod tests {
             }),
         );
         println!("val is {:?}", test_func.evaluate_complex_expr(&xval));
+        println!("exp val is {:?}", test_exp.evaluate_complex_expr(&xval));
     }
     #[test]
     fn test_simplification() {
@@ -92,7 +96,7 @@ mod tests {
     }
     #[test]
     fn test_integration() {
-        let test_product = Expr::Operation(Box::new(Operation::Mul(vec![
+        /*let test_product = Expr::Operation(Box::new(Operation::Mul(vec![
             Expr::Constant(2.0),
             Expr::Operation(Box::new(Operation::Add(vec![
                 Expr::Variable('x'),
@@ -106,7 +110,24 @@ mod tests {
                 Expr::Variable('a'),
                 Expr::Constant(2.0),
             ]))),
+        ])));*/
+
+        let test_product = Expr::Operation(Box::new(Operation::Mul(vec![
+            //Expr::Constant(2.0),
+            Expr::Operation(Box::new(Operation::Trig(TrigOp::Cos(Expr::create_mul(
+                vec![Expr::Variable('x'), Expr::Constant(3.0)],
+            ))))),
+            Expr::Operation(Box::new(Operation::Trig(TrigOp::Sin(Expr::create_mul(
+                vec![Expr::Variable('x'), Expr::Constant(2.0)],
+            ))))),
         ])));
+        /*let mut test_div = Expr::Operation(Box::new(Operation::Div((
+            Expr::create_exp(Expr::Variable('x')),
+            Expr::Constant(4.0),
+        ))));
+        test_div.simplify();
+        println!("div sim[lified is {:?}", test_div);*/
+
         //let simp_res = test_product.expand_product().1;
         //simp_res.simplify();
         //println!("yahah {}", simp_res.expr_to_string());
@@ -127,7 +148,7 @@ mod tests {
         )])));*/
         let mut int_res = test_product.integrate('x');
         int_res.simplify();
-        println!("{:?}", int_res.expr_to_string());
+        println!("integral result is {:?}", int_res.expr_to_string());
     }
     #[test]
     fn test_legendre() {

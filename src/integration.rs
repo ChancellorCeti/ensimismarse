@@ -1,4 +1,5 @@
-use crate::structs::{Expr, Operation};
+use crate::complex::ComplexNumPolarForm;
+use crate::structs::{ComplexNumber, Expr, Operation, TrigOp};
 
 impl<
         T: std::clone::Clone
@@ -80,7 +81,75 @@ where
                         }
                     }
                 }
-                Operation::Exp(_x) => {}
+                Operation::Exp(argument) => {
+                    let argument_checked_for_const_multiple =
+                        argument.check_if_constant_multiple_of_x();
+                    match argument_checked_for_const_multiple {
+                        Some((x, coeff)) => {
+                            if x == variable {
+                                let res_exp = Expr::Operation(Box::new(Operation::Exp(
+                                    Expr::Operation(Box::new(Operation::Mul(vec![
+                                        coeff.clone(),
+                                        Expr::Variable(x),
+                                    ]))),
+                                )));
+                                let res_constant = match coeff {
+                                    Expr::Constant(c) => Expr::Constant(T::from(1.0) / c),
+                                    Expr::ComplexNum(c) => match *c.to_owned() {
+                                        ComplexNumber::Polar(z) => {
+                                            Expr::ComplexNum(Box::new(ComplexNumber::Polar(
+                                                ComplexNumPolarForm {
+                                                    modulus: T::from(1.0),
+                                                    phase: T::from(0.0),
+                                                } / z,
+                                            )))
+                                        }
+                                        ComplexNumber::Cartesian(z) => {
+                                            Expr::ComplexNum(Box::new(ComplexNumber::Polar(
+                                                ComplexNumPolarForm {
+                                                    modulus: T::from(1.0),
+                                                    phase: T::from(0.0),
+                                                } / z.to_polar(),
+                                            )))
+                                        }
+                                    },
+                                    Expr::Variable(_) | Expr::Operation(_) => todo!(),
+                                };
+                                return Expr::Operation(Box::new(Operation::Mul(vec![
+                                    res_constant,
+                                    res_exp,
+                                ])));
+                            }
+                        }
+                        None => {}
+                    }
+                }
+                Operation::Mul(factors) => {
+                    let cos_and_sin_check = Expr::check_if_nice_trig_product(&factors, variable);
+                    if let Some(cos_and_sin_list) = cos_and_sin_check {
+                        let mut factors_as_exps = factors.clone();
+                        for i in 0..factors.len() {
+                            factors_as_exps[i] = match &cos_and_sin_list[i] {
+                                (0, xvar, coeff) => Expr::create_mul(vec![
+                                    coeff.clone(),
+                                    Expr::Variable(xvar.clone()),
+                                ])
+                                .create_complex_cosine_expr(),
+                                (1, xvar, coeff) => Expr::create_mul(vec![
+                                    coeff.clone(),
+                                    Expr::Variable(xvar.clone()),
+                                ])
+                                .create_complex_sine_expr(),
+                                _ => panic!(),
+                            };
+                        }
+                        let mut new_integrand =
+                            Expr::create_mul(factors_as_exps).expand_product().1;
+                        new_integrand.simplify();
+                        println!("simplified integrand is {:#?}", new_integrand);
+                        return new_integrand.integrate(variable);
+                    }
+                }
                 _ => {
                     return Expr::Constant(T::from(1.0f64));
                 }
@@ -106,6 +175,37 @@ where
             }
         }
         return (sum_exists, first_sum_index, sum_count);
+    }
+    // checks if self is of form "5x" or "(2i+3)x" and if so returns Some(x,5) or Some(x,2i+3) etc
+    fn check_if_constant_multiple_of_x(&self) -> Option<(char, Self)> {
+        if let Expr::Operation(box Operation::Mul(factors)) = self {
+            if factors.len() == 2 {
+                if let Expr::Variable(x) = &factors[0] {
+                    match &factors[1] {
+                        Expr::Constant(_c) => {
+                            return Some((*x, factors[1].clone()));
+                        }
+                        Expr::ComplexNum(_c) => {
+                            return Some((*x, factors[1].clone()));
+                        }
+                        _ => {}
+                    };
+                }
+                if let Expr::Variable(x) = &factors[1] {
+                    match &factors[0] {
+                        Expr::Constant(_c) => {
+                            return Some((*x, factors[0].clone()));
+                        }
+                        Expr::ComplexNum(_c) => {
+                            return Some((*x, factors[0].clone()));
+                        }
+                        _ => {}
+                    };
+                }
+                return None;
+            }
+        }
+        None
     }
     //returns (bool,Self) where bool is true if there was a sum that needed expanding, true if not
     pub fn expand_product(&self) -> (bool, Self) {
@@ -154,7 +254,7 @@ where
                 return res;
             }
         } else {
-            panic!("Expected product, found {}", self.expr_to_string());
+            return (false, self.clone());
         }
     }
     fn use_integration_linearity(&self, variable: char) -> Vec<(Expr<T>, Expr<T>)> {
@@ -232,7 +332,6 @@ where
                             }
                         }*/
                     }
-
                     return vec![(
                         constants_product_expr,
                         Expr::Operation(Box::new(Operation::Mul(res))),
@@ -243,5 +342,51 @@ where
                 }
             },
         }
+    }
+    //Vec<usize> -- 0 if cosine, 1 if sine
+    fn check_if_nice_trig_product(
+        x: &Vec<Self>,
+        variable: char,
+    ) -> Option<Vec<(usize, char, Expr<T>)>> {
+        let mut res = vec![(0, ' ', Expr::Variable('x')); x.len()];
+        for i in 0..x.len() {
+            match &x[i] {
+                Expr::Operation(some_op) => match *some_op.to_owned() {
+                    Operation::Trig(TrigOp::Sin(x)) => {
+                        let is_x_nice = x.check_if_constant_multiple_of_x();
+                        match is_x_nice {
+                            Some((x_var, coeff)) => {
+                                if x_var == variable {
+                                    res[i] = (1, x_var, coeff);
+                                } else {
+                                    return None;
+                                }
+                            }
+                            None => return None,
+                        }
+                    }
+                    Operation::Trig(TrigOp::Cos(x)) => {
+                        let is_x_nice = x.check_if_constant_multiple_of_x();
+                        match is_x_nice {
+                            Some((x_var, coeff)) => {
+                                if x_var == variable {
+                                    res[i] = (0, x_var, coeff);
+                                } else {
+                                    return None;
+                                }
+                            }
+                            None => return None,
+                        }
+                    }
+                    _ => {
+                        return None;
+                    }
+                },
+                _ => {
+                    return None;
+                }
+            };
+        }
+        return Some(res);
     }
 }
