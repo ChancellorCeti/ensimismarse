@@ -17,6 +17,22 @@ impl<
 where
     f64: From<T>,
 {
+    fn check_if_is_sum(&self) -> bool {
+        if let Expr::Operation(box some_op) = &self {
+            if let Operation::Add(_nested_sum) = some_op {
+                return true;
+            }
+        }
+        return false;
+    }
+    fn check_if_is_mul(&self) -> bool {
+        if let Expr::Operation(box some_op) = &self {
+            if let Operation::Mul(_nested_product) = some_op {
+                return true;
+            }
+        }
+        return false;
+    }
     pub fn create_sum(addends: Vec<Self>) -> Self {
         Expr::Operation(Box::new(Operation::Add(addends)))
     }
@@ -288,8 +304,16 @@ where
                     let mut constants_sum: T = (0.0).into();
                     let mut constants_exist = false;
                     let mut constants_count: usize = 0;
+                    let mut nested_addends: Vec<Expr<T>> = vec![];
                     for i in 0..x.len() {
                         x[i].simplify();
+                        if let Expr::Operation(box some_op) = &x[i] {
+                            if let Operation::Add(nested_sum) = some_op {
+                                for nested_addend in nested_sum {
+                                    nested_addends.push(nested_addend.clone());
+                                }
+                            }
+                        }
                         if let Expr::Constant(ref c) = x[i] {
                             constants_count += 1;
                             constants_exist = true;
@@ -325,6 +349,8 @@ where
                             x.push(Expr::Constant(constants_sum));
                         }
                     }
+                    x.retain(|addend| addend.check_if_is_sum() == false);
+                    x.append(&mut nested_addends);
                     *self = Expr::Operation(Box::new(Operation::Add(x)))
                 }
                 Operation::Div((mut a, mut b)) => {
@@ -375,6 +401,7 @@ where
                     let mut constants_count: usize = 0;
                     let mut constants_sum: T = (1.0).into();
                     let mut vars_count: HashMap<char, T> = HashMap::new();
+                    let mut nested_factors: Vec<Expr<T>> = vec![];
                     //for i in dd
                     //check if any factor is equal to 0, set the whole thing to 0 if so
                     for i in 0..x.len() {
@@ -385,6 +412,13 @@ where
                         if x[i].check_if_zero() {
                             *self = Expr::Constant((0.0).into());
                             return;
+                        }
+                        if let Expr::Operation(box some_op) = &x[i] {
+                            if let Operation::Mul(nested_product) = some_op {
+                                for nested_factor in nested_product {
+                                    nested_factors.push(nested_factor.clone());
+                                }
+                            }
                         }
                         if x[i].check_if_variable() {
                             let var_i = match x[i] {
@@ -440,6 +474,8 @@ where
                             res_factors.push(Expr::Variable(var_letter.clone()));
                         }
                     }
+                    res_factors.retain(|factor| factor.check_if_is_mul() == false);
+                    res_factors.append(&mut nested_factors);
                     *self = Expr::Operation(Box::new(Operation::Mul(res_factors)));
                 }
                 Operation::Pow((mut a, mut b)) => {

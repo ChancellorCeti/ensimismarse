@@ -17,6 +17,7 @@ where
 {
     pub fn integrate(&self, variable: char) -> Expr<T> {
         let mut expanded_form = self.expand_product().1;
+        println!("expanded form is {:#?}", expanded_form);
         expanded_form.simplify();
         let cleaned_problems = expanded_form.use_integration_linearity(variable);
         if cleaned_problems.len() > 1 {
@@ -146,7 +147,6 @@ where
                         let mut new_integrand =
                             Expr::create_mul(factors_as_exps).expand_product().1;
                         new_integrand.simplify();
-                        println!("simplified integrand is {:#?}", new_integrand);
                         return new_integrand.integrate(variable);
                     }
                 }
