@@ -17,8 +17,8 @@ where
 {
     pub fn integrate(&self, variable: char) -> Expr<T> {
         let mut expanded_form = self.expand_product().1;
-        println!("expanded form is {:#?}", expanded_form);
         expanded_form.simplify();
+        println!("expanded form is {:#?}", expanded_form);
         let cleaned_problems = expanded_form.use_integration_linearity(variable);
         if cleaned_problems.len() > 1 {
             let mut solutions = vec![Expr::Constant(T::from(0.0)); cleaned_problems.len()];

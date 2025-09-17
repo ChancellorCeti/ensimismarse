@@ -25,6 +25,15 @@ where
         }
         return false;
     }
+    fn check_if_exp(&self) -> bool {
+        if let Expr::Operation(box some_op) = &self {
+            if let Operation::Exp(_argument) = some_op {
+                return true;
+            }
+        }
+        return false;
+    }
+
     fn check_if_is_mul(&self) -> bool {
         if let Expr::Operation(box some_op) = &self {
             if let Operation::Mul(_nested_product) = some_op {
@@ -90,9 +99,14 @@ where
     }
     pub fn expr_to_string(&self) -> String {
         match self {
-            Expr::ComplexNum(_z) => {
-                todo!()
-            }
+            Expr::ComplexNum(z_wrapped) => match &**z_wrapped {
+                ComplexNumber::Cartesian(z) => {
+                    return format!("{:.3}+{:.3}i", f64::from(z.real_part.clone()), f64::from(z.imaginary_part.clone()));
+                }
+                ComplexNumber::Polar(z) => {
+                    return Expr::ComplexNum(Box::new(ComplexNumber::Cartesian(z.to_cartesian()))).expr_to_string();
+                }
+            },
             Expr::Constant(x) => {
                 return format!("{:.3}", f64::from(x.clone()));
             }
@@ -305,12 +319,54 @@ where
                     let mut constants_exist = false;
                     let mut constants_count: usize = 0;
                     let mut nested_addends: Vec<Expr<T>> = vec![];
+                    let mut var_pows_coeff: HashMap<(char, T), ComplexNumCartesianForm<T>> =
+                        HashMap::new();
                     for i in 0..x.len() {
                         x[i].simplify();
                         if let Expr::Operation(box some_op) = &x[i] {
                             if let Operation::Add(nested_sum) = some_op {
                                 for nested_addend in nested_sum {
                                     nested_addends.push(nested_addend.clone());
+                                }
+                            }
+                            if let Operation::Mul(nested_prod) = some_op {
+                                if nested_prod.len() == 2 {
+                                    if (nested_prod[0].check_if_complex_constant()
+                                        || nested_prod[0].check_if_constant())
+                                        && nested_prod[1].check_if_constant_power_of_x().is_some()
+                                    {
+                                        let x_pow =
+                                            nested_prod[0].check_if_constant_power_of_x().unwrap();
+
+                                        match &nested_prod[0] {
+                                            Expr::ComplexNum(box ComplexNumber::Cartesian(z)) => {
+                                                /*match var_pows_coeff.get_mut(&x_pow) {
+                                                    Some(coeff) => {
+                                                        *coeff = coeff;
+                                                    }
+                                                    None => {
+                                                        var_pows_coeff.insert(x_pow, 0);
+                                                    }
+                                                };*/
+                                            }
+                                            Expr::ComplexNum(box ComplexNumber::Polar(z)) => {}
+                                            Expr::Constant(c) => {}
+                                            _ => {}
+                                        }
+                                    }
+                                    if (nested_prod[1].check_if_complex_constant()
+                                        || nested_prod[1].check_if_constant())
+                                        && nested_prod[0].check_if_constant_power_of_x().is_some()
+                                    {
+                                        let x_pow =
+                                            nested_prod[0].check_if_constant_power_of_x().unwrap();
+                                        match &nested_prod[1] {
+                                            Expr::ComplexNum(box ComplexNumber::Cartesian(z)) => {}
+                                            Expr::ComplexNum(box ComplexNumber::Polar(z)) => {}
+                                            Expr::Constant(c) => {}
+                                            _ => {}
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -399,9 +455,13 @@ where
                     let mut res_factors: Vec<Expr<T>> = Vec::new();
                     let mut constants_exist = false;
                     let mut constants_count: usize = 0;
-                    let mut constants_sum: T = (1.0).into();
+                    let mut constants_sum: ComplexNumPolarForm<T> = ComplexNumPolarForm {
+                        modulus: T::from(1.0),
+                        phase: T::from(0.0),
+                    };
                     let mut vars_count: HashMap<char, T> = HashMap::new();
                     let mut nested_factors: Vec<Expr<T>> = vec![];
+                    let mut exp_arg_addends: Vec<Expr<T>> = vec![];
                     //for i in dd
                     //check if any factor is equal to 0, set the whole thing to 0 if so
                     for i in 0..x.len() {
@@ -418,6 +478,9 @@ where
                                 for nested_factor in nested_product {
                                     nested_factors.push(nested_factor.clone());
                                 }
+                            }
+                            if let Operation::Exp(argument) = some_op {
+                                exp_arg_addends.push(argument.clone());
                             }
                         }
                         if x[i].check_if_variable() {
@@ -447,18 +510,54 @@ where
                         if let Expr::Constant(ref c) = x[i] {
                             constants_count += 1;
                             constants_exist = true;
-                            constants_sum = constants_sum * c.clone();
+                            constants_sum = constants_sum
+                                * ComplexNumPolarForm {
+                                    modulus: c.clone(),
+                                    phase: T::from(0.0),
+                                };
+                        }
+                        if let Expr::ComplexNum(ref c_wrapped) = x[i] {
+                            constants_count += 1;
+                            constants_exist = true;
+                            match &**c_wrapped {
+                                ComplexNumber::Cartesian(c) => {
+                                    constants_sum = constants_sum * c.clone().to_polar();
+                                }
+                                ComplexNumber::Polar(c) => {
+                                    constants_sum = constants_sum * c.clone();
+                                }
+                            }
                         }
                         res_factors.push(x[i].clone());
                     }
                     if constants_count == x.len() {
-                        *self = Expr::Constant(constants_sum);
+                        *self = Expr::ComplexNum(Box::new(ComplexNumber::Polar(constants_sum)));
                         return;
                     }
+
+                    if exp_arg_addends.len() > 0 {
+                        let mut exp_arg_sum: Expr<T> =
+                            Expr::Operation(Box::new(Operation::Add(exp_arg_addends)));
+                        exp_arg_sum.simplify();
+                        res_factors.retain(|factor| factor.check_if_exp() == false);
+                        res_factors.push(Expr::Operation(Box::new(Operation::Exp(exp_arg_sum))));
+                    }
+
                     if constants_exist {
-                        res_factors.retain(|addend| addend.check_if_constant() == false);
-                        if constants_sum != T::from(1.0) {
-                            res_factors.push(Expr::Constant(constants_sum));
+                        res_factors.retain(|addend| {
+                            addend.check_if_constant() == false
+                                && addend.check_if_complex_constant() == false
+                        });
+                        if !((constants_sum.modulus == T::from(1.0))
+                            && (constants_sum.phase == T::from(0.0)))
+                        {
+                            res_factors.push(Expr::ComplexNum(Box::new(ComplexNumber::Polar(
+                                constants_sum,
+                            ))));
+                        } else if constants_sum.modulus != T::from(1.0)
+                            && constants_sum.phase == T::from(0.0)
+                        {
+                            res_factors.push(Expr::Constant(constants_sum.modulus));
                         }
                     }
                     res_factors.retain(|factor| None == factor.check_if_constant_power_of_x());
@@ -492,6 +591,10 @@ where
                         }
                     }
                     *self = Expr::Operation(Box::new(Operation::Pow((a, b))))
+                }
+                Operation::Exp(mut argument) => {
+                    argument.simplify();
+                    *self = Expr::Operation(Box::new(Operation::Exp(argument)));
                 }
                 _ => {}
             },
@@ -752,3 +855,13 @@ impl<T: std::clone::Clone + std::cmp::PartialEq + std::cmp::PartialEq> PartialEq
         }
     }
 }
+/*fn update_hashmap_factors{
+                            match vars_count.get_mut(&var_i) {
+                                Some(var_i_count) => {
+                                    *var_i_count = power_i + var_i_count.clone();
+                                }
+                                None => {
+                                    vars_count.insert(var_i, power_i);
+                                }
+                            };
+}*/
