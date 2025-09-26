@@ -101,10 +101,15 @@ where
         match self {
             Expr::ComplexNum(z_wrapped) => match &**z_wrapped {
                 ComplexNumber::Cartesian(z) => {
-                    return format!("{:.3}+{:.3}i", f64::from(z.real_part.clone()), f64::from(z.imaginary_part.clone()));
+                    return format!(
+                        "{:.3}+{:.3}i",
+                        f64::from(z.real_part.clone()),
+                        f64::from(z.imaginary_part.clone())
+                    );
                 }
                 ComplexNumber::Polar(z) => {
-                    return Expr::ComplexNum(Box::new(ComplexNumber::Cartesian(z.to_cartesian()))).expr_to_string();
+                    return Expr::ComplexNum(Box::new(ComplexNumber::Cartesian(z.to_cartesian())))
+                        .expr_to_string();
                 }
             },
             Expr::Constant(x) => {
@@ -198,6 +203,13 @@ where
                     }
                     return res;
                 }
+                Operation::Trig(TrigOp::Cos(x)) => {
+                    let mut res: String = String::new();
+                    res.push_str("cos(");
+                    res.push_str(x.expr_to_string().as_str());
+                    res.push(')');
+                    return res;
+                }
                 Operation::Trig(TrigOp::Sin(x)) => {
                     let mut res: String = String::new();
                     res.push_str("sin(");
@@ -213,7 +225,7 @@ where
                     return res;
                 }
                 _ => {
-                    todo!()
+                    panic!("{:?}", self);
                 }
             },
         }
@@ -319,7 +331,7 @@ where
                     let mut constants_exist = false;
                     let mut constants_count: usize = 0;
                     let mut nested_addends: Vec<Expr<T>> = vec![];
-                    let mut var_pows_coeff: HashMap<(char, T), ComplexNumCartesianForm<T>> =
+                    let mut var_pows_coeff: HashMap<(char, u64), ComplexNumCartesianForm<T>> =
                         HashMap::new();
                     for i in 0..x.len() {
                         x[i].simplify();
@@ -336,21 +348,69 @@ where
                                         && nested_prod[1].check_if_constant_power_of_x().is_some()
                                     {
                                         let x_pow =
-                                            nested_prod[0].check_if_constant_power_of_x().unwrap();
+                                            nested_prod[1].check_if_constant_power_of_x().unwrap();
 
                                         match &nested_prod[0] {
                                             Expr::ComplexNum(box ComplexNumber::Cartesian(z)) => {
-                                                /*match var_pows_coeff.get_mut(&x_pow) {
+                                                match var_pows_coeff.get_mut(&(
+                                                    x_pow.0,
+                                                    f64::from(x_pow.1.clone()).to_bits(),
+                                                )) {
                                                     Some(coeff) => {
-                                                        *coeff = coeff;
+                                                        *coeff = coeff.clone() + z.clone();
                                                     }
                                                     None => {
-                                                        var_pows_coeff.insert(x_pow, 0);
+                                                        var_pows_coeff.insert(
+                                                            (
+                                                                x_pow.0,
+                                                                f64::from(x_pow.1.clone())
+                                                                    .to_bits(),
+                                                            ),
+                                                            z.clone(),
+                                                        );
                                                     }
-                                                };*/
+                                                };
                                             }
-                                            Expr::ComplexNum(box ComplexNumber::Polar(z)) => {}
-                                            Expr::Constant(c) => {}
+                                            Expr::ComplexNum(box ComplexNumber::Polar(z)) => {
+                                                match var_pows_coeff.get_mut(&(
+                                                    x_pow.0,
+                                                    f64::from(x_pow.1.clone()).to_bits(),
+                                                )) {
+                                                    Some(coeff) => {
+                                                        *coeff = coeff.clone() + z.to_cartesian();
+                                                    }
+                                                    None => {
+                                                        var_pows_coeff.insert(
+                                                            (
+                                                                x_pow.0,
+                                                                f64::from(x_pow.1.clone())
+                                                                    .to_bits(),
+                                                            ),
+                                                            z.to_cartesian(),
+                                                        );
+                                                    }
+                                                };
+                                            }
+                                            Expr::Constant(c) => {
+                                                match var_pows_coeff.get_mut(&(
+                                                    x_pow.0,
+                                                    f64::from(x_pow.1.clone()).to_bits(),
+                                                )) {
+                                                    Some(coeff) => {
+                                                        *coeff = coeff.clone() + ComplexNumCartesianForm::create_cartesian_complex_num_simple(c.clone(),T::from(0.0));
+                                                    }
+                                                    None => {
+                                                        var_pows_coeff.insert(
+                                                            (
+                                                                x_pow.0,
+                                                                f64::from(x_pow.1.clone())
+                                                                    .to_bits(),
+                                                            ),
+                                                            ComplexNumCartesianForm::create_cartesian_complex_num_simple(c.clone(),T::from(0.0)),
+                                                        );
+                                                    }
+                                                };
+                                            }
                                             _ => {}
                                         }
                                     }
@@ -360,10 +420,68 @@ where
                                     {
                                         let x_pow =
                                             nested_prod[0].check_if_constant_power_of_x().unwrap();
+
                                         match &nested_prod[1] {
-                                            Expr::ComplexNum(box ComplexNumber::Cartesian(z)) => {}
-                                            Expr::ComplexNum(box ComplexNumber::Polar(z)) => {}
-                                            Expr::Constant(c) => {}
+                                            Expr::ComplexNum(box ComplexNumber::Cartesian(z)) => {
+                                                match var_pows_coeff.get_mut(&(
+                                                    x_pow.0,
+                                                    f64::from(x_pow.1.clone()).to_bits(),
+                                                )) {
+                                                    Some(coeff) => {
+                                                        *coeff = coeff.clone() + z.clone();
+                                                    }
+                                                    None => {
+                                                        var_pows_coeff.insert(
+                                                            (
+                                                                x_pow.0,
+                                                                f64::from(x_pow.1.clone())
+                                                                    .to_bits(),
+                                                            ),
+                                                            z.clone(),
+                                                        );
+                                                    }
+                                                };
+                                            }
+                                            Expr::ComplexNum(box ComplexNumber::Polar(z)) => {
+                                                match var_pows_coeff.get_mut(&(
+                                                    x_pow.0,
+                                                    f64::from(x_pow.1.clone()).to_bits(),
+                                                )) {
+                                                    Some(coeff) => {
+                                                        *coeff = coeff.clone() + z.to_cartesian();
+                                                    }
+                                                    None => {
+                                                        var_pows_coeff.insert(
+                                                            (
+                                                                x_pow.0,
+                                                                f64::from(x_pow.1.clone())
+                                                                    .to_bits(),
+                                                            ),
+                                                            z.to_cartesian(),
+                                                        );
+                                                    }
+                                                };
+                                            }
+                                            Expr::Constant(c) => {
+                                                match var_pows_coeff.get_mut(&(
+                                                    x_pow.0,
+                                                    f64::from(x_pow.1.clone()).to_bits(),
+                                                )) {
+                                                    Some(coeff) => {
+                                                        *coeff = coeff.clone() + ComplexNumCartesianForm::create_cartesian_complex_num_simple(c.clone(),T::from(0.0));
+                                                    }
+                                                    None => {
+                                                        var_pows_coeff.insert(
+                                                            (
+                                                                x_pow.0,
+                                                                f64::from(x_pow.1.clone())
+                                                                    .to_bits(),
+                                                            ),
+                                                            ComplexNumCartesianForm::create_cartesian_complex_num_simple(c.clone(),T::from(0.0)),
+                                                        );
+                                                    }
+                                                };
+                                            }
                                             _ => {}
                                         }
                                     }
@@ -375,25 +493,23 @@ where
                             constants_exist = true;
                             constants_sum = constants_sum + c.clone();
                         }
-                        //check for af(x)+bf(x)=(a+b)f(x) where a,b are real numbers
-                        //todo!!!!!!
-                        /*if let Expr::Operation(addend_op) = &x[i] {
-                            let addend_op_unboxed = *addend_op.to_owned();
-                            if let Operation::Mul(addend_factors) = addend_op_unboxed {
-                                if addend_factors.len() == 2 {
-                                    if let Expr::Constant(ref c) = addend_factors[1] {
-                                        if addend_factors[0].check_if_operation() {}
-                                        if addend_factors[0].check_if_variable() {}
-                                    }
-                                    if let Expr::Constant(ref c) = addend_factors[0] {
-                                        if addend_factors[1].check_if_operation() {}
-                                        if addend_factors[1].check_if_variable() {}
-                                    }
-                                    let addend_a = addend_factors[0].extract_operation();
-                                    let addend_b = addend_factors[1].extract_operation();
-                                }
-                            }
-                        }*/
+                        for var_pow in var_pows_coeff.keys() {
+                            let coeff = var_pows_coeff.get(var_pow).unwrap().clone();
+
+                            // NOTE TO DOGGO (ME YAHAHA)
+                            // THE BELOW SECTION CAN BE UNCOMMENTED, BUT ONLY AFTER I IMPLEMENT THE
+                            // FOLLOWING: USE RETAIN FUNCTION TO REMOVE ALL ADDENDS WITH THE X^N
+                            // CURRENTLY BEING LOOKED AT WITH VAR_POW
+                            // AND THEN I WILL BE DONE WITH AX^R+BX^R=(A+B)X^R
+
+                            /*x.push(Expr::Operation(Box::new(Operation::Mul(vec![
+                                Expr::ComplexNum(Box::new(ComplexNumber::Cartesian(coeff))),
+                                Expr::Operation(Box::new(Operation::Pow((
+                                    Expr::Variable(var_pow.0),
+                                    Expr::Constant(T::from(f64::from_bits(var_pow.1))),
+                                )))),
+                            ]))));*/
+                        }
                     }
                     if constants_count == x.len() {
                         *self = Expr::Constant(constants_sum);

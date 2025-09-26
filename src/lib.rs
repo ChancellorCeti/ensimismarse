@@ -13,6 +13,8 @@ mod tests {
 
     // use crate::complex::ComplexNumCartesianForm;
 
+    use crate::complex::ComplexNumCartesianForm;
+
     use super::*;
     //use complex::*;
     use structs::ComplexNumber;
@@ -95,6 +97,27 @@ mod tests {
         println!("yahah {}", test_func2.expr_to_string());
     }
     #[test]
+    fn test_distributive() {
+        let mut t: Expr<f64> = Expr::Operation(Box::new(Operation::Add(vec![
+            Expr::create_mul(vec![
+                Expr::Operation(Box::new(Operation::Pow((
+                    Expr::Variable('x'),
+                    Expr::Constant(2.1),
+                )))),
+                ComplexNumCartesianForm::create_cartesian_complex_num(1.3, 2.0),
+            ]),
+            Expr::create_mul(vec![
+                Expr::Operation(Box::new(Operation::Pow((
+                    Expr::Variable('x'),
+                    Expr::Constant(2.1),
+                )))),
+                Expr::Constant(2.1),
+            ]),
+        ])));
+        t.simplify();
+        println!("{}", t.expr_to_string());
+    }
+    #[test]
     fn test_integration() {
         /*let test_product = Expr::Operation(Box::new(Operation::Mul(vec![
             Expr::Constant(2.0),
@@ -115,10 +138,10 @@ mod tests {
         let test_product = Expr::Operation(Box::new(Operation::Mul(vec![
             //Expr::Constant(2.0),
             Expr::Operation(Box::new(Operation::Trig(TrigOp::Cos(Expr::create_mul(
-                vec![Expr::Variable('x'), Expr::Constant(3.0)],
+                vec![Expr::Variable('x'), Expr::Constant(3.1)],
             ))))),
             Expr::Operation(Box::new(Operation::Trig(TrigOp::Sin(Expr::create_mul(
-                vec![Expr::Variable('x'), Expr::Constant(2.0)],
+                vec![Expr::Variable('x'), Expr::Constant(2.1)],
             ))))),
         ])));
         /*let mut test_div = Expr::Operation(Box::new(Operation::Div((

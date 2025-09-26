@@ -44,6 +44,12 @@ impl<
 where
     f64: From<T>,
 {
+    pub fn create_cartesian_complex_num_simple(a: T, b: T) -> ComplexNumCartesianForm<T> {
+        ComplexNumCartesianForm {
+            real_part: a,
+            imaginary_part: b,
+        }
+    }
     pub fn create_cartesian_complex_num(a: T, b: T) -> Expr<T> {
         Expr::ComplexNum(Box::new(ComplexNumber::Cartesian(
             ComplexNumCartesianForm {
