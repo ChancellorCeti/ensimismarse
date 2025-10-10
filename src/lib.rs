@@ -20,6 +20,58 @@ mod tests {
     use structs::ComplexNumber;
     use structs::{Expr, Operation, TrigOp};
     #[test]
+    fn having_fun() {
+        let test_product = Expr::Operation(Box::new(Operation::Mul(vec![
+            Expr::Operation(Box::new(Operation::Trig(TrigOp::Cos(Expr::create_mul(
+                vec![Expr::Variable('x'), Expr::Constant(12.0)],
+            ))))),
+            Expr::Operation(Box::new(Operation::Trig(TrigOp::Cos(Expr::create_mul(
+                vec![Expr::Variable('x'), Expr::Constant(3.0)],
+            ))))),
+            Expr::Operation(Box::new(Operation::Trig(TrigOp::Sin(Expr::create_mul(
+                vec![Expr::Variable('x'), Expr::Constant(2.0)],
+            ))))),
+            Expr::Operation(Box::new(Operation::Trig(TrigOp::Cos(Expr::create_mul(
+                vec![Expr::Variable('x'), Expr::Constant(7.0)],
+            ))))),
+            Expr::Operation(Box::new(Operation::Trig(TrigOp::Sin(Expr::create_mul(
+                vec![Expr::Variable('x'), Expr::Constant(5.0)],
+            ))))),
+            Expr::Operation(Box::new(Operation::Trig(TrigOp::Sin(Expr::create_mul(
+                vec![Expr::Variable('x'), Expr::Constant(34.0)],
+            ))))),
+        ])));
+        let mut int_res = test_product.integrate('x');
+        int_res.simplify_with_options(true);
+        int_res.simplify_with_options(true);
+        int_res.simplify_complex_exps();
+        println!("integral result is {:?}", int_res.expr_to_string());
+        //let mut xval1: HashMap<char, ComplexNumber<f64>> = HashMap::new();
+        let mut xval1: HashMap<char, f64> = HashMap::new();
+        xval1.insert('x', 1.0f64);
+        let mut xval2: HashMap<char, f64> = HashMap::new();
+        xval2.insert('x', 10.0f64);
+        println!(
+            "{}",
+            int_res.evaluate_expr(&xval2) - int_res.evaluate_expr(&xval1)
+        );
+        /*xval1.insert(
+            'x',
+            ComplexNumber::Cartesian(
+                ComplexNumCartesianForm::create_cartesian_complex_num_simple(0.0f64, 0.0f64),
+            ),
+        );
+        let mut xval2: HashMap<char, ComplexNumber<f64>> = HashMap::new();
+        xval2.insert(
+            'x',
+            ComplexNumber::Cartesian(
+                ComplexNumCartesianForm::create_cartesian_complex_num_simple(10.0f64, 0.0f64),
+            ),
+        );
+        println!("{:?}", int_res.evaluate_complex_expr(&xval2));
+        println!("{:?}", int_res.evaluate_complex_expr(&xval1));*/
+    }
+    #[test]
     fn test_complex_simp() {
         let test_arg: Expr<f64> = Expr::Operation(Box::new(Operation::Add(vec![
             Expr::Operation(Box::new(Operation::Mul(vec![
@@ -170,34 +222,13 @@ mod tests {
                 vec![Expr::Variable('x'), Expr::Constant(2.0)],
             ))))),
         ])));
-        /*let mut test_div = Expr::Operation(Box::new(Operation::Div((
-            Expr::create_exp(Expr::Variable('x')),
-            Expr::Constant(4.0),
-        ))));
-        test_div.simplify();
-        println!("div sim[lified is {:?}", test_div);*/
-
-        //let simp_res = test_product.expand_product().1;
-        //simp_res.simplify();
-        //println!("yahah {}", simp_res.expr_to_string());
-        /*let f: Expr<f64> = Expr::Operation(Box::new(Operation::Add(vec![Expr::Operation(
-            Box::new(Operation::Mul(vec![
-                Expr::Constant(2.0),
-                Expr::Operation(Box::new(Operation::Pow((
-                    Expr::Variable('x'),
-                    Expr::Constant(2.0f64),
-                )))),
-                Expr::Operation(Box::new(Operation::Trig(TrigOp::Sin(Expr::Operation(
-                    Box::new(Operation::Mul(vec![
-                        Expr::Constant(3.0),
-                        Expr::Variable('x'),
-                    ])),
-                ))))),
-            ])),
-        )])));*/
         let mut int_res = test_product.integrate('x');
-        int_res.simplify();
-        //println!("{:#?}",int_res);
+        int_res.simplify_with_options(true);
+        int_res.simplify_with_options(true);
+        //println!("{:#?}", int_res);
+        println!("integral result is {:?}", int_res.expr_to_string());
+        int_res.simplify_complex_exps();
+        println!("{:#?}", int_res);
         println!("integral result is {:?}", int_res.expr_to_string());
     }
     #[test]

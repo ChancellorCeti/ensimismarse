@@ -1,5 +1,5 @@
 use crate::complex::{ComplexNumCartesianForm, ComplexNumPolarForm};
-use crate::structs::{ComplexNumber, Expr, Operation, TrigOp};
+use crate::structs::{ComplexNumber, Expr, Operation, TrigOp, TrigOps};
 
 impl<
         T: std::clone::Clone
@@ -9,6 +9,7 @@ impl<
             + std::ops::Sub<Output = T>
             + std::cmp::PartialEq
             + std::fmt::Debug
+            + TrigOps
             + From<f64>
             + Into<f64>,
     > Expr<T>

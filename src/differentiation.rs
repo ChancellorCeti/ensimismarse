@@ -1,8 +1,8 @@
-use crate::structs::{Expr, Operation, TrigOp};
+use crate::structs::{Expr, Operation, TrigOp, TrigOps};
 use std::collections::HashMap;
 pub fn differentiate<T>(f: Expr<T>, v: char) -> Expr<T>
 where
-    T: From<f64> + std::clone::Clone,
+    T: From<f64> + std::clone::Clone + TrigOps,
 {
     let mut res: Expr<T>;
     res = Expr::Constant(T::from(0.0));
@@ -143,6 +143,7 @@ where
         + std::cmp::PartialEq
         + std::fmt::Debug
         + From<f64>
+        + TrigOps
         + Into<f64>,
     f64: From<T>,
 {

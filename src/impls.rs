@@ -1,6 +1,6 @@
 use crate::complex::ComplexNumCartesianForm;
 use crate::complex::*;
-use crate::structs::{ComplexNumber, Expr, HyperbolicOp, Operation, TrigOp};
+use crate::structs::{ComplexNumber, Expr, HyperbolicOp, Operation, TrigOp, TrigOps};
 use std::collections::HashMap;
 
 impl<
@@ -11,11 +11,13 @@ impl<
             + std::ops::Sub<Output = T>
             + std::cmp::PartialEq
             + std::fmt::Debug
+            + TrigOps
             + From<f64>
             + Into<f64>,
     > Expr<T>
 where
     f64: From<T>,
+    T: TrigOps,
 {
     fn check_if_is_sum(&self) -> bool {
         if let Expr::Operation(box some_op) = &self {
@@ -33,7 +35,18 @@ where
         }
         return false;
     }
-
+    pub fn simplify_complex_exps(&mut self) {
+        match self {
+            Expr::Operation(some_op) => match *some_op.to_owned() {
+                Operation::Add(mut x) => {
+                    turn_complex_exps_into_trigs(&mut x);
+                    *self = Expr::Operation(Box::new(Operation::Add(x)));
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+    }
     fn check_if_is_mul(&self) -> bool {
         if let Expr::Operation(box some_op) = &self {
             if let Operation::Mul(_nested_product) = some_op {
@@ -102,7 +115,7 @@ where
             Expr::ComplexNum(z_wrapped) => match &**z_wrapped {
                 ComplexNumber::Cartesian(z) => {
                     return format!(
-                        "{:.3}+{:.3}i",
+                        "{:.9}+{:.9}i",
                         f64::from(z.real_part.clone()),
                         f64::from(z.imaginary_part.clone())
                     );
@@ -113,7 +126,7 @@ where
                 }
             },
             Expr::Constant(x) => {
-                return format!("{:.3}", f64::from(x.clone()));
+                return format!("{:.8}", f64::from(x.clone()));
             }
             Expr::Variable(x) => {
                 return x.to_string();
@@ -322,8 +335,29 @@ where
         }
     }
     pub fn simplify(&mut self) {
+        self.simplify_with_options(false)
+    }
+    pub fn simplify_with_options(&mut self, cheese_complex_nums_to_constants: bool) {
         match self {
-            Expr::ComplexNum(_z) => {
+            Expr::ComplexNum(z_cont) => {
+                if cheese_complex_nums_to_constants {
+                    match *z_cont.to_owned() {
+                        ComplexNumber::Cartesian(z) => {
+                            if f64::from(z.imaginary_part).abs() < (10.0f64).powi(-14) {
+                                *self = Expr::Constant(z.real_part);
+                                return;
+                            }
+                        }
+                        ComplexNumber::Polar(z) => {
+                            if f64::from(z.to_cartesian().imaginary_part).abs()
+                                < (10.0f64).powi(-14)
+                            {
+                                *self = Expr::Constant(z.to_cartesian().real_part);
+                                return;
+                            }
+                        }
+                    }
+                }
                 return;
             }
             Expr::Variable(_x) => {
@@ -349,12 +383,12 @@ where
                         HashMap::new();
                     if x.len() == 1 {
                         let mut x0clone = x[0].clone();
-                        x0clone.simplify();
+                        x0clone.simplify_with_options(cheese_complex_nums_to_constants);
                         *self = x0clone;
                         return;
                     }
                     for i in 0..x.len() {
-                        x[i].simplify();
+                        x[i].simplify_with_options(cheese_complex_nums_to_constants);
                         if let Expr::Operation(box some_op) = &x[i] {
                             if let Operation::Add(nested_sum) = some_op {
                                 for nested_addend in nested_sum {
@@ -845,7 +879,7 @@ where
                     for i in 0..x.len() {
                         let pow_of_variable = x[i].check_if_constant_power_of_x();
                         //if pow_of_variable == None {
-                        x[i].simplify();
+                        x[i].simplify_with_options(cheese_complex_nums_to_constants);
                         //}
                         if x[i].check_if_zero() {
                             *self = Expr::Constant((0.0).into());
@@ -916,7 +950,7 @@ where
                     if exp_arg_addends.len() > 0 {
                         let mut exp_arg_sum: Expr<T> =
                             Expr::Operation(Box::new(Operation::Add(exp_arg_addends)));
-                        exp_arg_sum.simplify();
+                        exp_arg_sum.simplify_with_options(cheese_complex_nums_to_constants);
                         res_factors.retain(|factor| factor.check_if_exp() == false);
                         res_factors.push(Expr::Operation(Box::new(Operation::Exp(exp_arg_sum))));
                     }
@@ -926,9 +960,7 @@ where
                             addend.check_if_constant() == false
                                 && addend.check_if_complex_constant() == false
                         });
-                        if !((constants_sum.modulus == T::from(1.0))
-                            && (constants_sum.phase == T::from(0.0)))
-                        {
+                        if !(constants_sum.phase == T::from(0.0)) {
                             res_factors.push(Expr::ComplexNum(Box::new(ComplexNumber::Polar(
                                 constants_sum,
                             ))));
@@ -978,7 +1010,10 @@ where
             },
         }
     }
-    pub fn evaluate_expr(&self, variable_values: &HashMap<char, T>) -> T {
+    pub fn evaluate_expr(&self, variable_values: &HashMap<char, T>) -> T
+    where
+        T: TrigOps,
+    {
         match self {
             Expr::ComplexNum(_z) => panic!("found a complex number when using evaluate_expr. please use evaluate_complex_expr if complex numbers might appear in a calculation"),
             Expr::Variable(x) => {
@@ -998,14 +1033,14 @@ where
                 Operation::Add(x) => {
                     let mut res: T = (0.0).into();
                     for i in 0..x.len() {
-                        res = x[i].evaluate_expr(variable_values) + res;
+                        res = res + x[i].evaluate_expr(variable_values);
                     }
                     return res;
                 }
                 Operation::Mul(x) => {
                     let mut res: T = (1.0).into();
                     for i in 0..x.len() {
-                        res = x[i].evaluate_expr(variable_values) * res;
+                        res = res * x[i].evaluate_expr(variable_values);
                     }
                     return res;
                 }
@@ -1035,10 +1070,10 @@ where
                         .into();
                 }
                 Operation::Trig(TrigOp::Sin(x)) => {
-                    return f64::from(x.evaluate_expr(variable_values)).sin().into();
+                    return (x.evaluate_expr(variable_values)).sin();
                 }
                 Operation::Trig(TrigOp::Cos(x)) => {
-                    return f64::from(x.evaluate_expr(variable_values)).cos().into();
+                    return (x.evaluate_expr(variable_values)).cos();
                 }
                 Operation::Trig(TrigOp::Tan(x)) => {
                     return f64::from(x.evaluate_expr(variable_values)).tan().into();
@@ -1167,7 +1202,9 @@ where
         }
     }
 }
-impl<T: std::clone::Clone + std::cmp::PartialEq + std::cmp::PartialEq> PartialEq for Expr<T> {
+impl<T: std::clone::Clone + std::cmp::PartialEq + TrigOps + std::cmp::PartialEq> PartialEq
+    for Expr<T>
+{
     fn eq(&self, other: &Self) -> bool {
         use std::mem::discriminant;
         match (self, other) {
@@ -1233,13 +1270,260 @@ impl<T: std::clone::Clone + std::cmp::PartialEq + std::cmp::PartialEq> PartialEq
         }
     }
 }
-/*fn update_hashmap_factors{
-                            match vars_count.get_mut(&var_i) {
-                                Some(var_i_count) => {
-                                    *var_i_count = power_i + var_i_count.clone();
+fn turn_complex_exps_into_trigs<T>(x: &mut Vec<Expr<T>>)
+where
+    T: std::clone::Clone
+        + std::ops::Add<Output = T>
+        + std::ops::Mul<Output = T>
+        + std::ops::Div<Output = T>
+        + std::ops::Sub<Output = T>
+        + std::cmp::PartialEq
+        + std::fmt::Debug
+        + From<f64>
+        + TrigOps
+        + Into<f64>,
+    f64: From<T>,
+{
+    let mut trig_list: Vec<Expr<T>> = vec![];
+    let mut arg_list: Vec<(T, T, usize, usize)> = vec![];
+    let mut sine_list: Vec<(T, T, usize, usize)> = vec![];
+    for i in 0..x.len() {
+        if let Expr::Operation(box Operation::Mul(outer_prod)) = &x[i] {
+            match (&outer_prod[0], &outer_prod[1]) {
+                (
+                    Expr::Operation(box Operation::Exp(Expr::Operation(box Operation::Mul(
+                        arg_prod,
+                    )))),
+                    Expr::Constant(c),
+                )
+                | (
+                    Expr::Constant(c),
+                    Expr::Operation(box Operation::Exp(Expr::Operation(box Operation::Mul(
+                        arg_prod,
+                    )))),
+                ) => {
+                    if arg_prod.len() == 2 {
+                        match (&arg_prod[0], &arg_prod[1]) {
+                            (Expr::Variable(var_c), Expr::ComplexNum(z_cont))
+                            | (Expr::ComplexNum(z_cont), Expr::Variable(var_c)) => {
+                                match *z_cont.to_owned() {
+                                    ComplexNumber::Polar(z) => {
+                                        for j in 0..arg_list.len() {
+                                            if arg_list[j].1
+                                                == T::from(-1.0f64)
+                                                    * z.to_cartesian().imaginary_part
+                                            {
+                                                if arg_list[j].0 == c.clone() {
+                                                    arg_list[j].3 = i;
+                                                    trig_list.push(make_const_multiple_of_cosine(
+                                                        Expr::Constant(
+                                                            T::from(2.0) * arg_list[j].0.clone(),
+                                                        ),
+                                                        arg_list[j].1.clone(),
+                                                        *var_c,
+                                                    ));
+                                                }
+                                            }
+                                        }
+                                        arg_list.push((
+                                            c.clone(),
+                                            z.to_cartesian().imaginary_part,
+                                            i,
+                                            i,
+                                        ))
+                                    }
+                                    ComplexNumber::Cartesian(z) => {
+                                        for j in 0..arg_list.len() {
+                                            if arg_list[j].1
+                                                == T::from(-1.0f64) * z.imaginary_part.clone()
+                                            {
+                                                if arg_list[j].0 == c.clone() {
+                                                    arg_list[j].3 = i;
+                                                    trig_list.push(make_const_multiple_of_cosine(
+                                                        Expr::Constant(
+                                                            T::from(2.0) * arg_list[j].0.clone(),
+                                                        ),
+                                                        arg_list[j].1.clone(),
+                                                        *var_c,
+                                                    ));
+                                                }
+                                            }
+                                        }
+                                        arg_list.push((c.clone(), z.imaginary_part.clone(), i, i))
+                                    }
                                 }
-                                None => {
-                                    vars_count.insert(var_i, power_i);
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                (
+                    Expr::Operation(box Operation::Exp(Expr::Operation(box Operation::Mul(
+                        arg_prod,
+                    )))),
+                    Expr::ComplexNum(c),
+                )
+                | (
+                    Expr::ComplexNum(c),
+                    Expr::Operation(box Operation::Exp(Expr::Operation(box Operation::Mul(
+                        arg_prod,
+                    )))),
+                ) => {
+                    let cf: ComplexNumCartesianForm<T> = match *c.to_owned() {
+                        ComplexNumber::Polar(cp) => cp.to_cartesian(),
+                        ComplexNumber::Cartesian(cc) => cc,
+                    };
+                    if arg_prod.len() == 2 {
+                        match (&arg_prod[0], &arg_prod[1]) {
+                            (Expr::Variable(var_c), Expr::ComplexNum(z_cont))
+                            | (Expr::ComplexNum(z_cont), Expr::Variable(var_c)) => {
+                                match *z_cont.to_owned() {
+                                    ComplexNumber::Polar(z) => {
+                                        for j in 0..sine_list.len() {
+                                            if sine_list[j].1
+                                                == T::from(-1.0f64)
+                                                    * z.to_cartesian().imaginary_part
+                                            {
+                                                if sine_list[j].0
+                                                    == (T::from(-1.0) * cf.imaginary_part.clone())
+                                                {
+                                                    sine_list[j].3 = i;
+                                                    trig_list.push(make_const_multiple_of_sine(
+                                                        Expr::Constant(
+                                                            T::from(-2.0) * arg_list[j].0.clone(),
+                                                        ),
+                                                        arg_list[j].1.clone(),
+                                                        *var_c,
+                                                    ));
+                                                }
+                                            }
+                                        }
+                                        arg_list.push((
+                                            cf.imaginary_part.clone(),
+                                            z.to_cartesian().imaginary_part,
+                                            i,
+                                            i,
+                                        ))
+                                    }
+                                    ComplexNumber::Cartesian(z) => {
+                                        for j in 0..sine_list.len() {
+                                            if sine_list[j].1
+                                                == T::from(-1.0f64) * z.imaginary_part.clone()
+                                            {
+                                                if sine_list[j].0
+                                                    == (T::from(-1.0) * cf.imaginary_part.clone())
+                                                {
+                                                    sine_list[j].3 = i;
+                                                    trig_list.push(make_const_multiple_of_sine(
+                                                        Expr::Constant(
+                                                            T::from(-2.0) * arg_list[j].0.clone(),
+                                                        ),
+                                                        arg_list[j].1.clone(),
+                                                        *var_c,
+                                                    ));
+                                                }
+                                            }
+                                        }
+                                        arg_list.push((
+                                            cf.imaginary_part.clone(),
+                                            z.imaginary_part.clone(),
+                                            i,
+                                            i,
+                                        ))
+                                    }
                                 }
-                            };
-}*/
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    //println!("yahh {:?}",arg_list);
+    let mut indices_to_remove: Vec<usize> = arg_list.iter().map(|arg| arg.3).collect();
+    for arg in arg_list {
+        indices_to_remove.push(arg.2);
+    }
+    for arg in sine_list {
+        indices_to_remove.push(arg.3);
+        indices_to_remove.push(arg.2);
+    }
+    //println!("{:?}",indices_to_remove);
+    //remove_all_duplicates(&mut indices_to_remove); what's wrong with this line? must check why
+    //indices_to_remove has duplicates even when it shouldn't
+    remove_indices(x, indices_to_remove);
+    for trig_elem in trig_list {
+        x.push(trig_elem);
+    }
+}
+fn make_const_multiple_of_cosine<T>(sine_coeff: Expr<T>, var_coeff: T, variable: char) -> Expr<T>
+where
+    T: std::clone::Clone
+        + std::ops::Add<Output = T>
+        + std::ops::Mul<Output = T>
+        + std::ops::Div<Output = T>
+        + std::ops::Sub<Output = T>
+        + std::cmp::PartialEq
+        + std::fmt::Debug
+        + From<f64>
+        + TrigOps
+        + Into<f64>,
+    f64: From<T>,
+{
+    return Expr::Operation(Box::new(Operation::Mul(vec![
+        sine_coeff,
+        Expr::Operation(Box::new(Operation::Trig(TrigOp::Cos(Expr::Operation(
+            Box::new(Operation::Mul(vec![
+                Expr::Constant(var_coeff),
+                Expr::Variable(variable),
+            ])),
+        ))))),
+    ])));
+}
+
+fn make_const_multiple_of_sine<T>(sine_coeff: Expr<T>, var_coeff: T, variable: char) -> Expr<T>
+where
+    T: std::clone::Clone
+        + std::ops::Add<Output = T>
+        + std::ops::Mul<Output = T>
+        + std::ops::Div<Output = T>
+        + std::ops::Sub<Output = T>
+        + std::cmp::PartialEq
+        + std::fmt::Debug
+        + From<f64>
+        + TrigOps
+        + Into<f64>,
+    f64: From<T>,
+{
+    return Expr::Operation(Box::new(Operation::Mul(vec![
+        sine_coeff,
+        Expr::Operation(Box::new(Operation::Trig(TrigOp::Sin(Expr::Operation(
+            Box::new(Operation::Mul(vec![
+                Expr::Constant(var_coeff),
+                Expr::Variable(variable),
+            ])),
+        ))))),
+    ])));
+}
+pub fn remove_indices<T>(vec: &mut Vec<Expr<T>>, indices: Vec<usize>)
+where
+    T: Clone + TrigOps,
+{
+    let mut sorted = indices.clone();
+    sorted.sort_unstable_by(|a, b| b.cmp(a));
+
+    for &i in &sorted {
+        if i < vec.len() {
+            vec.remove(i);
+        }
+    }
+}
+fn _remove_all_duplicates<T: Eq + std::hash::Hash + Clone>(v: &mut Vec<T>) {
+    let mut counts = HashMap::new();
+    for x in v.iter() {
+        *counts.entry(x.clone()).or_insert(0) += 1;
+    }
+    v.retain(|x| counts[x] == 1);
+}

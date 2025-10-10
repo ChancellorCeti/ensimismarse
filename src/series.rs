@@ -1,10 +1,10 @@
 use crate::{
     differentiation::differentiate,
-    structs::{Expr, Operation},
+    structs::{Expr, Operation, TrigOps},
 };
 pub fn create_multipole_expansion<T>(_f: Expr<T>) -> Expr<T>
 where
-    T: From<f64> + std::clone::Clone,
+    T: From<f64> + std::clone::Clone + TrigOps,
 {
     todo!()
 }
@@ -17,6 +17,7 @@ where
         + std::ops::Div<Output = T>
         + std::ops::Sub<Output = T>
         + std::cmp::PartialEq
+        + TrigOps
         + std::fmt::Debug,
     f64: From<T>,
 {
@@ -66,7 +67,7 @@ where
 
 pub fn generate_legendre_polynomials<T>(l_max: usize) -> Vec<Expr<T>>
 where
-    T: From<f64> + std::clone::Clone,
+    T: From<f64> + std::clone::Clone + TrigOps,
 {
     let mut res: Vec<Expr<T>> = vec![Expr::Constant(T::from(0.0)); l_max + 1];
     res[0] = Expr::Constant(T::from(1.0));
@@ -117,7 +118,7 @@ pub fn factorial(n: usize, cache: &mut std::collections::HashMap<usize, f64>) ->
 
 fn _generate_spherical_harmonics<T>(l_max: usize, m_max: usize) -> Vec<Vec<Expr<T>>>
 where
-    T: From<f64> + std::clone::Clone,
+    T: From<f64> + std::clone::Clone + TrigOps,
 {
     let mut factorial_cache = std::collections::HashMap::new();
     let mut res: Vec<Vec<Expr<T>>> = vec![vec![Expr::Constant(T::from(0.0)); m_max + 1]; l_max + 1];
@@ -140,7 +141,7 @@ where
     res
 }
 
-pub struct Series<T: std::clone::Clone> {
+pub struct Series<T: std::clone::Clone + TrigOps> {
     _term_count: usize,
     _terms: Vec<Expr<T>>,
 }

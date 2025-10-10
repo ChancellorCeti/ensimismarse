@@ -1,11 +1,11 @@
-use crate::structs::{ComplexNumber, Expr};
+use crate::structs::{ComplexNumber, Expr, TrigOps};
 #[derive(Debug, Clone, Copy)]
-pub struct ComplexNumCartesianForm<T: Clone> {
+pub struct ComplexNumCartesianForm<T: Clone + TrigOps> {
     pub real_part: T,
     pub imaginary_part: T,
 }
 #[derive(Debug, Clone, Copy)]
-pub struct ComplexNumPolarForm<T: Clone> {
+pub struct ComplexNumPolarForm<T: Clone + TrigOps> {
     pub modulus: T,
     pub phase: T,
 }
@@ -17,11 +17,13 @@ impl<
             + std::ops::Sub<Output = T>
             + std::cmp::PartialEq
             + std::fmt::Debug
+            + TrigOps
             + From<f64>
             + Into<f64>,
     > ComplexNumPolarForm<T>
 where
     f64: From<T>,
+    T: TrigOps,
 {
     pub fn to_cartesian(&self) -> ComplexNumCartesianForm<T> {
         ComplexNumCartesianForm {
@@ -33,6 +35,7 @@ where
 impl<
         T: std::clone::Clone
             + std::ops::Add<Output = T>
+            + TrigOps
             + std::ops::Mul<Output = T>
             + std::ops::Div<Output = T>
             + std::ops::Sub<Output = T>
@@ -43,6 +46,7 @@ impl<
     > ComplexNumCartesianForm<T>
 where
     f64: From<T>,
+    T: TrigOps,
 {
     pub fn create_cartesian_complex_num_simple(a: T, b: T) -> ComplexNumCartesianForm<T> {
         ComplexNumCartesianForm {
@@ -74,7 +78,7 @@ where
     }
     //pub fn modulus
 }
-impl<T: std::clone::Clone + std::ops::Add<Output = T>> std::ops::Add
+impl<T: std::clone::Clone + std::ops::Add<Output = T> + TrigOps> std::ops::Add
     for ComplexNumCartesianForm<T>
 {
     type Output = Self;
@@ -86,8 +90,8 @@ impl<T: std::clone::Clone + std::ops::Add<Output = T>> std::ops::Add
         }
     }
 }
-impl<T: std::clone::Clone + std::ops::Mul<Output = T> + std::ops::Sub<Output = T>> std::ops::Mul
-    for ComplexNumCartesianForm<T>
+impl<T: std::clone::Clone + std::ops::Mul<Output = T> + std::ops::Sub<Output = T> + TrigOps>
+    std::ops::Mul for ComplexNumCartesianForm<T>
 {
     type Output = Self;
 
@@ -101,8 +105,8 @@ impl<T: std::clone::Clone + std::ops::Mul<Output = T> + std::ops::Sub<Output = T
     }
 }
 
-impl<T: std::clone::Clone + std::ops::Mul<Output = T> + std::ops::Add<Output = T>> std::ops::Mul
-    for ComplexNumPolarForm<T>
+impl<T: std::clone::Clone + std::ops::Mul<Output = T> + std::ops::Add<Output = T> + TrigOps>
+    std::ops::Mul for ComplexNumPolarForm<T>
 {
     type Output = Self;
 
@@ -113,8 +117,8 @@ impl<T: std::clone::Clone + std::ops::Mul<Output = T> + std::ops::Add<Output = T
         }
     }
 }
-impl<T: std::clone::Clone + std::ops::Div<Output = T> + std::ops::Sub<Output = T>> std::ops::Div
-    for ComplexNumPolarForm<T>
+impl<T: std::clone::Clone + std::ops::Div<Output = T> + std::ops::Sub<Output = T> + TrigOps>
+    std::ops::Div for ComplexNumPolarForm<T>
 {
     type Output = Self;
 
