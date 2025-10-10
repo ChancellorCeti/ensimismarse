@@ -1,4 +1,4 @@
-use crate::complex::ComplexNumPolarForm;
+use crate::complex::{ComplexNumCartesianForm, ComplexNumPolarForm};
 use crate::structs::{ComplexNumber, Expr, Operation, TrigOp};
 
 impl<
@@ -18,15 +18,15 @@ where
     pub fn integrate(&self, variable: char) -> Expr<T> {
         let mut expanded_form = self.expand_product().1;
         expanded_form.simplify();
-        println!("expanded form is {:#?}", expanded_form.expr_to_string());
-        println!("expanded form is {:#?}", expanded_form);
+        //println!("expanded form is {:#?}", expanded_form.expr_to_string());
+        //println!("expanded form is {:#?}", expanded_form);
         let cleaned_problems = expanded_form.use_integration_linearity(variable);
         if cleaned_problems.len() > 1 {
             let mut solutions = vec![Expr::Constant(T::from(0.0)); cleaned_problems.len()];
             for i in 0..cleaned_problems.len() {
                 solutions[i] = cleaned_problems[i].1.integrate(variable);
             }
-            return Expr::Operation(Box::new(Operation::Add(
+            let mut res = Expr::Operation(Box::new(Operation::Add(
                 (0..cleaned_problems.len())
                     .map(|i| {
                         Expr::Operation(Box::new(Operation::Mul(vec![
@@ -36,6 +36,8 @@ where
                     })
                     .collect(),
             )));
+            res.simplify();
+            return res;
         }
         let mut selfclone = self.clone();
         selfclone.simplify();
@@ -285,8 +287,16 @@ where
                     ]
                 }
                 Operation::Mul(x) => {
+                    // to-do implement \int (a+bi) f(x) = (a+bi) \int f(x)
                     let mut constants_product: T = T::from(1.0);
                     let mut constants_exist = false;
+                    let mut complex_constants_product: ComplexNumCartesianForm<T> =
+                        ComplexNumCartesianForm::create_cartesian_complex_num_simple(
+                            T::from(1.0),
+                            T::from(0.0),
+                        );
+                    let mut complex_constants_exist = false;
+
                     let mut constants_variables: Vec<Expr<T>> = vec![];
                     for i in 0..x.len() {
                         if let Expr::Constant(c) = &x[i] {
@@ -299,6 +309,19 @@ where
                             constants_exist = true;
                             constants_variables.push(x[i].clone());
                         }
+                        if let Expr::ComplexNum(c_cont) = &x[i] {
+                            complex_constants_exist = true;
+                            match *c_cont.to_owned() {
+                                ComplexNumber::Cartesian(c) => {
+                                    complex_constants_product =
+                                        complex_constants_product * c.clone();
+                                }
+                                ComplexNumber::Polar(c) => {
+                                    complex_constants_product =
+                                        complex_constants_product * c.to_cartesian();
+                                }
+                            }
+                        }
                         if let Some((variable_i, _power_i)) = x[i].check_if_constant_power_of_x() {
                             if variable_i != variable {
                                 constants_variables.push(x[i].clone());
@@ -307,12 +330,16 @@ where
                     }
 
                     constants_variables.push(Expr::Constant(constants_product));
+                    constants_variables.push(Expr::ComplexNum(Box::new(ComplexNumber::Cartesian(
+                        complex_constants_product,
+                    ))));
                     let mut res = x.clone();
                     let mut constants_product_expr =
                         Expr::Operation(Box::new(Operation::Mul(constants_variables)));
                     constants_product_expr.simplify();
                     if constants_exist {
                         res.retain(|factor| factor.check_if_constant() == false);
+                        res.retain(|factor| factor.check_if_complex_constant() == false);
                         res.retain(|expr| {
                             if let Expr::Operation(box Operation::Pow((base, _exponent))) = expr {
                                 if let Expr::Variable(var_name) = base {
@@ -333,6 +360,19 @@ where
                             }
                         }*/
                     }
+                    if complex_constants_exist {
+                        res.retain(|factor| {
+                            if let Expr::ComplexNum(_c_cont) = factor {
+                                return false;
+                            }
+                            return true;
+                        });
+                    }
+                    /*println!(
+                        "const prod expr is {:?} and integrand is {:#?}",
+                        constants_product_expr, res
+                    );*/
+
                     return vec![(
                         constants_product_expr,
                         Expr::Operation(Box::new(Operation::Mul(res))),

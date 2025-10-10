@@ -20,6 +20,32 @@ mod tests {
     use structs::ComplexNumber;
     use structs::{Expr, Operation, TrigOp};
     #[test]
+    fn test_complex_simp() {
+        let test_arg: Expr<f64> = Expr::Operation(Box::new(Operation::Add(vec![
+            Expr::Operation(Box::new(Operation::Mul(vec![
+                Expr::ComplexNum(Box::new(ComplexNumber::Polar(
+                    complex::ComplexNumPolarForm {
+                        modulus: 2.0,
+                        phase: f64::consts::FRAC_PI_2,
+                    },
+                ))),
+                Expr::Variable('x'),
+            ]))),
+            Expr::Operation(Box::new(Operation::Mul(vec![
+                Expr::ComplexNum(Box::new(ComplexNumber::Polar(
+                    complex::ComplexNumPolarForm {
+                        modulus: 3.0,
+                        phase: f64::consts::FRAC_PI_2,
+                    },
+                ))),
+                Expr::Variable('x'),
+            ]))),
+        ])));
+        let mut test_func: Expr<f64> = Expr::Operation(Box::new(Operation::Exp(test_arg)));
+        test_func.simplify();
+        println!("{:#?}", test_func);
+    }
+    #[test]
     fn test_complex() {
         let test_exp: Expr<f64> = Expr::Operation(Box::new(Operation::Exp(Expr::Variable('x'))));
         let test_funca: Expr<f64> = Expr::Operation(Box::new(Operation::Mul(vec![
@@ -138,10 +164,10 @@ mod tests {
         let test_product = Expr::Operation(Box::new(Operation::Mul(vec![
             //Expr::Constant(2.0),
             Expr::Operation(Box::new(Operation::Trig(TrigOp::Cos(Expr::create_mul(
-                vec![Expr::Variable('x'), Expr::Constant(3.1)],
+                vec![Expr::Variable('x'), Expr::Constant(3.0)],
             ))))),
             Expr::Operation(Box::new(Operation::Trig(TrigOp::Sin(Expr::create_mul(
-                vec![Expr::Variable('x'), Expr::Constant(2.1)],
+                vec![Expr::Variable('x'), Expr::Constant(2.0)],
             ))))),
         ])));
         /*let mut test_div = Expr::Operation(Box::new(Operation::Div((
@@ -171,6 +197,7 @@ mod tests {
         )])));*/
         let mut int_res = test_product.integrate('x');
         int_res.simplify();
+        //println!("{:#?}",int_res);
         println!("integral result is {:?}", int_res.expr_to_string());
     }
     #[test]
