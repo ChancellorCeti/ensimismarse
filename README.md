@@ -13,6 +13,7 @@ This project is still in its early stages. However, almost any elementary functi
 - Powers of x, N'th Roots of x
 
 Functions, represented by the <code>Expr</code> struct in the library, can also be evaluated given a vector containing the numerical values of the variables. They may also be simplified (although this feature is still limited in its scope).
+This project is (slowly) becoming capable of symbolic integration; so far, some very simple integrals can be evaluated.
 
 ## Usage
 
