@@ -1287,6 +1287,7 @@ where
     let mut trig_list: Vec<Expr<T>> = vec![];
     let mut arg_list: Vec<(T, T, usize, usize)> = vec![];
     let mut sine_list: Vec<(T, T, usize, usize)> = vec![];
+    let mut indices_to_remove: Vec<usize> = vec![];
     for i in 0..x.len() {
         if let Expr::Operation(box Operation::Mul(outer_prod)) = &x[i] {
             match (&outer_prod[0], &outer_prod[1]) {
@@ -1322,6 +1323,10 @@ where
                                                         arg_list[j].1.clone(),
                                                         *var_c,
                                                     ));
+                                                    indices_to_remove.push(arg_list[j].3);
+                                                    indices_to_remove.push(arg_list[j].2);
+                                                    arg_list.remove(j);
+                                                    break;
                                                 }
                                             }
                                         }
@@ -1346,6 +1351,10 @@ where
                                                         arg_list[j].1.clone(),
                                                         *var_c,
                                                     ));
+                                                    indices_to_remove.push(arg_list[j].3);
+                                                    indices_to_remove.push(arg_list[j].2);
+                                                    arg_list.remove(j);
+                                                    break;
                                                 }
                                             }
                                         }
@@ -1395,6 +1404,10 @@ where
                                                         arg_list[j].1.clone(),
                                                         *var_c,
                                                     ));
+                                                    indices_to_remove.push(sine_list[j].3);
+                                                    indices_to_remove.push(sine_list[j].2);
+                                                    sine_list.remove(j);
+                                                    break;
                                                 }
                                             }
                                         }
@@ -1421,6 +1434,10 @@ where
                                                         arg_list[j].1.clone(),
                                                         *var_c,
                                                     ));
+                                                    indices_to_remove.push(sine_list[j].3);
+                                                    indices_to_remove.push(sine_list[j].2);
+                                                    sine_list.remove(j);
+                                                    break;
                                                 }
                                             }
                                         }
@@ -1442,14 +1459,13 @@ where
         }
     }
     //println!("yahh {:?}",arg_list);
-    let mut indices_to_remove: Vec<usize> = arg_list.iter().map(|arg| arg.3).collect();
-    for arg in arg_list {
+    /*    for arg in arg_list {
         indices_to_remove.push(arg.2);
     }
     for arg in sine_list {
         indices_to_remove.push(arg.3);
         indices_to_remove.push(arg.2);
-    }
+    }*/
     //println!("{:?}",indices_to_remove);
     //remove_all_duplicates(&mut indices_to_remove); what's wrong with this line? must check why
     //indices_to_remove has duplicates even when it shouldn't

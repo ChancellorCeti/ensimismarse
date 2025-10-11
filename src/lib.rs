@@ -40,6 +40,15 @@ mod tests {
             Expr::Operation(Box::new(Operation::Trig(TrigOp::Sin(Expr::create_mul(
                 vec![Expr::Variable('x'), Expr::Constant(34.0)],
             ))))),
+            /*Expr::Operation(Box::new(Operation::Trig(TrigOp::Cos(Expr::create_mul(
+                vec![Expr::Variable('x'), Expr::Constant(4.0)],
+            ))))),
+            Expr::Operation(Box::new(Operation::Trig(TrigOp::Cos(Expr::create_mul(
+                vec![Expr::Variable('x'), Expr::Constant(3.0)],
+            ))))),
+            Expr::Operation(Box::new(Operation::Trig(TrigOp::Sin(Expr::create_mul(
+                vec![Expr::Variable('x'), Expr::Constant(2.0)],
+            ))))),*/
         ])));
         let mut int_res = test_product.integrate('x');
         int_res.simplify_with_options(true);
